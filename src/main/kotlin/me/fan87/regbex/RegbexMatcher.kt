@@ -90,7 +90,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return false
     }
 
-    fun replace(replaceTo: Iterable<AbstractInsnNode>) {
+    fun replace(replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
         checkMatched()
         val newInstructions = ArrayList<AbstractInsnNode>()
 
@@ -106,9 +106,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 newInstructions.addAll(replaceTo)
             }
         }
-        instructions.clear()
-        instructions.addAll(newInstructions)
-
+        return newInstructions
     }
 
     /**
