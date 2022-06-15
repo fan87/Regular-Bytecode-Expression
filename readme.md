@@ -1,3 +1,5 @@
+# WIP
+This thing is still in progress, and planned to be finished on 6/17/22
 # Regular Bytecode Expression (regbex)
 
 > ⚠️ This library should only be used in Kotlin - at least for Regbex builders.
@@ -11,6 +13,9 @@ A regular expression engine that's made for Java bytecode and objectweb ASM.
 
 
 ## Using
+### Usage
+You can check `src/main/test/kotlin` for code example and usage.
+
 ### Using it in Java
 If your codebase is in Java and you don't want to re-code your entire project, you can have classes in Kotlin that pre-defines
 every regbex you'll be using.
