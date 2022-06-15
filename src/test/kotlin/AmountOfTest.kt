@@ -102,4 +102,32 @@ class AmountOfTest {
 
         assertTrue(matcher.next(0))
     }
+
+    @Test
+    internal fun amountOfTestF() {
+        val instructions = InsnList().apply {
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+        }
+
+        val matcher = RegbexPattern {
+            thenAmountOf(2) {
+                thenCustomCheck {
+                    it.opcode == Opcodes.INVOKEVIRTUAL
+                }
+                thenCustomCheck {
+                    it.opcode == Opcodes.INVOKESPECIAL
+                }
+            }
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+        assertTrue(matcher.next(0))
+    }
 }
