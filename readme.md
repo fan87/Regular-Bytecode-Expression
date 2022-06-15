@@ -10,6 +10,15 @@ A regular expression engine that's made for Java bytecode and objectweb ASM.
 ## Missing Features / Known Issues
 1. Look-Behind & Look-After (Won't add for now)
 2. Nested capture group's order is incorrect (You can fix it by using name instead of the index of it, and you should do it)
+3. Incorrect `next()` order (For example, input: `aaabbbccc`, and regex: `(aaabbb|bb)`, it would find `bb` first before
+`aaabbb` because `bb` ends before `aaabbb`. I'm bad at writing algorithms so lol)
+
+########## Since it's WIP, here's a list of all missing features in this version ##########
+
+4. and
+5. not
+6. any amount of (`*`)
+7. captured group (not capturing group, but using already captured group, equivalent to `\1`, `\2` in regex)
 
 
 ## Using
