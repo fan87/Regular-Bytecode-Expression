@@ -19,6 +19,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
 
     private var matched = ArrayList<AbstractInsnNode>()
     private var matchedStartIndex = 0
+    private var startFindingIndex = 0
 
     private var matchedAny = false
 
@@ -34,6 +35,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     }
 
     fun next(startIndex: Int, instanceLimit: Int): Boolean {
+        this.startFindingIndex = startIndex
         val regbex = pattern.regbex
         val target = instructions.subList(startIndex, instructions.size)
         val matchingInstances = ArrayList<MatchingInstance>()
@@ -56,13 +58,15 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 created++
                 val matchingInstance = MatchingInstance(index, index, 0, ArrayList(regbex.elements), this, {
                     newIndex = it
-                }, {}, { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+                }, {}, {_, _, _ -> true})
+                matchingInstance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
                     this.matched = matched
                     this.captured = captured
                     this.capturedNamed = capturedNamed
                     this.matchedAny = true
+                    this.matchedStartIndex = matchingInstance.parentStartIndex
                     true
-                })
+                }
                 matchingInstance.onFailed = {
                     matchingInstances.remove(matchingInstance)
                 }
@@ -82,10 +86,12 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 return true
             }
         }
+        matchedAny = false
         return false
     }
 
     fun replace(replaceTo: Iterable<AbstractInsnNode>) {
+        checkMatched()
         val newInstructions = ArrayList<AbstractInsnNode>()
 
         for (instruction in instructions.withIndex()) {
@@ -109,14 +115,20 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
      * Exclusive
      */
     fun endIndex(): Int {
-        return matchedStartIndex + matched.size
+        checkMatched()
+        return matchedStartIndex + matched.size + startFindingIndex
     }
 
     /**
      * Inclusive
      */
     fun startIndex(): Int {
-        return matchedStartIndex
+        checkMatched()
+        return startFindingIndex + matchedStartIndex
+    }
+
+    fun group(): List<AbstractInsnNode> {
+        return group(0)!!
     }
 
     fun group(index: Int): List<AbstractInsnNode>? {

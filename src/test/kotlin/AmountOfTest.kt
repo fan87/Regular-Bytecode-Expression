@@ -3,6 +3,7 @@ import org.junit.jupiter.api.Test
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodInsnNode
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -62,6 +63,7 @@ class AmountOfTest {
         }.matcher(instructions)
 
         assertTrue(matcher.next(0))
+        assertEquals(2, matcher.group(0)!!.size)
     }
 
     @Test
@@ -101,6 +103,7 @@ class AmountOfTest {
         }.matcher(instructions)
 
         assertTrue(matcher.next(0))
+        assertEquals(4, matcher.group(0)!!.size)
     }
 
     @Test
@@ -127,7 +130,12 @@ class AmountOfTest {
             }
         }.matcher(instructions)
 
+
         assertTrue(matcher.next(0))
-        assertTrue(matcher.next(0))
+        assertEquals(4, matcher.group().size)
+        assertEquals(4, matcher.endIndex())
+        assertTrue(matcher.next(matcher.endIndex()))
+        assertEquals(8, matcher.endIndex())
+        assertFalse(matcher.next(matcher.endIndex()))
     }
 }

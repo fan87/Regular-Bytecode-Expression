@@ -65,7 +65,7 @@ internal class MatchingInstance constructor(
     }
 
     fun provideNext(index: Int, instruction: AbstractInsnNode, last: Boolean) {
-        println("${getIndent()}[B] Index: $index")
+        println("${getIndent()}[B] Index: $index ($last)")
         if (waiting.isNotEmpty()) {
             for (matchingInstance in ArrayList(waiting)) {
                 matchingInstance.provideNext(index, instruction, last)
@@ -87,7 +87,7 @@ internal class MatchingInstance constructor(
 
         onProvided(index, instruction, last)
         matched.add(instruction)
-        println(getIndent() + "Check ($currentElementIndex): ${currentElement?.javaClass?.simpleName}")
+        //println(getIndent() + "Check ($currentElementIndex): ${currentElement?.javaClass?.simpleName}")
 
         if (currentElement is CustomCheck) {
             if (currentElement.check(instruction)) {
@@ -95,10 +95,10 @@ internal class MatchingInstance constructor(
                 if (next == null) {
                     success(matched, captured, capturedNamed)
                 }
-                println(getIndent() + "Passed CustomCheck $index")
+                //println(getIndent() + "Passed CustomCheck $index")
                 return
             }
-            println(getIndent() + "Failed CustomCheck $index")
+            //println(getIndent() + "Failed CustomCheck $index")
             failed()
         }
         if (currentElement is Group) {
@@ -128,7 +128,7 @@ internal class MatchingInstance constructor(
                 true
             }
             waiting.add(instance)
-            println(getIndent() + "Started nested group instance ${currentElement.name}")
+            //println(getIndent() + "Started nested group instance ${currentElement.name}")
             instance.provideNext(index, instruction, last)
             nextElement()
             if (instance.hasSucceeded && currentElement() == null) {
@@ -154,7 +154,7 @@ internal class MatchingInstance constructor(
 
 
             instance.onFailed = onFailed@{
-                println(instance.getIndent() + "Failed: $counter / ${currentElement.range}")
+                //println(instance.getIndent() + "Failed: $counter / ${currentElement.range}")
                 if (counter < currentElement.range.first) {
                     failed()
                     return@onFailed
@@ -163,9 +163,9 @@ internal class MatchingInstance constructor(
                     failed()
                     return@onFailed
                 }
-                println(instance.getIndent() + "Removed from onFailed")
+                //println(instance.getIndent() + "Removed from onFailed $lastEndIndex")
                 waiting.clear()
-                this.matched.addAll(matched)
+                this.matched.addAll(instance.matched.subList(0, lastEndIndex - index - 1))
                 for (mutableEntry in capturedNamed) {
                     this.capturedNamed[mutableEntry.key] = mutableEntry.value
                 }
@@ -173,6 +173,7 @@ internal class MatchingInstance constructor(
                     this.captured.add(abstractInsnNodes)
                 }
                 this.captured.add(matched)
+                instance.matched.clear()
 
                 goBack(lastEndIndex)
                 instance.hasFailed = false
@@ -183,14 +184,14 @@ internal class MatchingInstance constructor(
             }
             instance.onSuccess = onSuccess@{ matched, captured, capturedNamed ->
                 counter++
-                println(instance.getIndent() + "Success: $counter / ${currentElement.range}")
+                //println(instance.getIndent() + "Success: $counter / ${currentElement.range}")
                 if (counter > currentElement.range.last) {
                     if (lastEndIndex == -1) {
                         failed()
                     } else {
-                        println(instance.getIndent() + "Removed from onSuccess")
+                        //println(instance.getIndent() + "Removed from onSuccess / $lastEndIndex")
                         waiting.clear()
-                        this.matched.addAll(matched)
+                        this.matched.addAll(matched.subList(0, lastEndIndex - index - 1))
                         for (mutableEntry in capturedNamed) {
                             this.capturedNamed[mutableEntry.key] = mutableEntry.value
                         }
@@ -198,6 +199,7 @@ internal class MatchingInstance constructor(
                             this.captured.add(abstractInsnNodes)
                         }
                         this.captured.add(matched)
+                        instance.matched.clear()
 
                         goBack(lastEndIndex)
                         instance.hasSucceeded = true
@@ -209,12 +211,12 @@ internal class MatchingInstance constructor(
                 }
                 instance.currentElementIndex = 0
                 instance.hasSucceeded = false
-                println(instance.getIndent() + "Succeeded! Going back to loop")
+                //println(instance.getIndent() + "Succeeded! Going back to loop")
 
                 false
             }
             waiting.add(instance)
-            println(getIndent() + "Started nested amountOf instance")
+            //println(getIndent() + "Started nested amountOf instance")
             instance.provideNext(index, instruction, last)
             nextElement()
             return
@@ -252,7 +254,7 @@ internal class MatchingInstance constructor(
 
                     true
                 }
-                println(getIndent() + "Started nested or instance $i")
+                //println(getIndent() + "Started nested or instance $i")
                 waiting.add(instance)
                 instance.provideNext(index, instruction, last)
                 if (instance.hasSucceeded) {
