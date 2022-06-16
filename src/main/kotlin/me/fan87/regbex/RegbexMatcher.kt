@@ -12,7 +12,6 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         }
     }
 
-    internal var ignoreRules: (AbstractInsnNode) -> Boolean = { false }
 
     private var capturedNamed = HashMap<String, List<AbstractInsnNode>>()
     private var captured = ArrayList<List<AbstractInsnNode>>()
@@ -23,12 +22,6 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
 
     private var matchedAny = false
 
-    fun addIgnoreRule(rule: (AbstractInsnNode) -> Boolean) {
-        val oldIgnoreRule = this.ignoreRules
-        this.ignoreRules = {
-            oldIgnoreRule(it) && rule(it)
-        }
-    }
 
     fun next(startIndex: Int): Boolean {
         return next(startIndex, Int.MAX_VALUE)
@@ -44,9 +37,6 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         while (index in 0 until target.size) {
             var newIndex = index
             val insn = target[index]
-            if (ignoreRules(insn)) {
-                continue
-            }
             for (matchingInstance in ArrayList(matchingInstances)) {
                 matchingInstance.provideNext(index, insn, index == target.size - 1)
                 if (matchedAny) {

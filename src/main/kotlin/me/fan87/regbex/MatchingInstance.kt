@@ -268,6 +268,67 @@ internal class MatchingInstance constructor(
 
             return
         }
+        if (currentElement is And) {
+            var i = -1
+            nextElement()
+            var succeeded = 0
+            val expected = currentElement.regbex.size
+            for (regbex in currentElement.regbex) {
+                i++
+                val instance = MatchingInstance(
+                    parentStartIndex,
+                    index,
+                    nestedLevel + 1,
+                    ArrayList(regbex.elements),
+                    matcher,
+                    goBack,
+                    {},
+                    {_, _, _ -> true}
+                )
+
+                instance.onFailed = {
+                    waiting.remove(instance)
+                    failed()
+                }
+
+                instance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+                    waiting.remove(instance)
+
+                    for (mutableEntry in capturedNamed) {
+                        this.capturedNamed[mutableEntry.key] = mutableEntry.value
+                    }
+                    for (abstractInsnNodes in captured) {
+                        this.captured.add(abstractInsnNodes)
+                    }
+                    this.captured.add(matched)
+
+                    succeeded++
+                    if (succeeded == expected) { // if it's the last one that matches
+                        this.matched.addAll(matched)
+                    }
+                    true
+                }
+
+                instance.onEndOfFile = {
+                    instance.failed()
+                }
+                waiting.add(instance)
+
+
+                instance.provideNext(index, instruction, last)
+                if (hasFailed) {
+                    return
+                }
+            }
+
+            if (waiting.isEmpty()) {
+                if (currentElement() == null) {
+                    success(matched, captured, capturedNamed)
+                }
+            }
+
+            return
+        }
 
 
     }

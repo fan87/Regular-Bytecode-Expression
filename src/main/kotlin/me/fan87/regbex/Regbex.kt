@@ -7,6 +7,7 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
+import java.util.regex.Matcher
 
 internal interface RegbexMatchElement
 internal class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement
@@ -94,6 +95,7 @@ class Regbex {
         thenCustomCheck { it.javaClass == type }
     }
 
+    //<editor-fold desc="Var Node" defaultstate="collapsed">
     fun thenVarNode(varNumber: Int) {
         thenCustomCheck {
             it is VarInsnNode && it.`var` == varNumber
@@ -114,7 +116,8 @@ class Regbex {
             it.opcode in 21..25 && it is VarInsnNode && it.`var` == varNumber
         }
     }
-
+    //</editor-fold>
+    //<editor-fold desc="Ldc String" defaultstate="collapsed">
     fun thenLdcString() {
         thenCustomCheck { it is LdcInsnNode && it.cst is String }
     }
@@ -130,8 +133,8 @@ class Regbex {
             it is LdcInsnNode && it.cst is String && (it.cst as String).matches(regex)
         }
     }
-
-
+    //</editor-fold>
+    //<editor-fold desc="Method Calls" defaultstate="collapsed">
     fun thenMethodCall(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp, vararg argsTypes: TypeExp) {
         thenCustomCheck {
             if (it is MethodInsnNode) {
@@ -155,7 +158,28 @@ class Regbex {
     fun thenVirtualMethodCall(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp, vararg argsTypes: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKEVIRTUAL }}, {thenMethodCall(ownerType, methodNamePattern, returnType, *argsTypes)})
     }
+    fun thenMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
+        thenCustomCheck {
+            if (it is MethodInsnNode) {
+                println("${ownerType.matches(it.owner)} (${it.owner}) / ${it.name.matches(methodNamePattern)} / ${returnType.matches(it.desc.split(")")[1])}")
+                ownerType.matches(it.owner) &&
+                it.name.matches(methodNamePattern) &&
+                returnType.matches(it.desc.split(")")[1])
+            } else {
+                false
+            }
+        }
+    }
 
+    fun thenStaticMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
+        thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKESTATIC }}, {thenMethodCallIgnoreArgs(ownerType, methodNamePattern, returnType)})
+    }
+
+    fun thenVirtualMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
+        thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKEVIRTUAL }}, {thenMethodCallIgnoreArgs(ownerType, methodNamePattern, returnType)})
+    }
+    //</editor-fold>
+    //<editor-fold desc="Fields" defaultstate="collapsed">
     fun thenField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenCustomCheck {
             it is FieldInsnNode && ownerType.matches(it.owner) && it.name.matches(fieldNamePattern) && fieldType.matches(it.desc)
@@ -193,6 +217,7 @@ class Regbex {
     fun thenPutVirtualField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.PUTFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
+    //</editor-fold>
 
 
 }
@@ -229,7 +254,7 @@ class TypeExp {
      */
     constructor(name: String) {
         val newName = name.replace(".", "/")
-        matchCheck = { it == newName || it == "L$newName;" }
+        matchCheck = { println("Input: $it"); it == newName || it == "L$newName;" }
     }
 
     /**

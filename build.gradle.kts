@@ -1,7 +1,9 @@
+import com.adarshr.gradle.testlogger.theme.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.21"
+    id("com.adarshr.test-logger") version "3.2.0"
 }
 
 group = "me.fan87"
@@ -17,6 +19,10 @@ dependencies {
     implementation("org.ow2.asm:asm-util:9.3")
 }
 
+testlogger {
+    theme = ThemeType.MOCHA
+}
+
 tasks.test {
     dependsOn(":test-source:classes")
     println(project(":test-source").sourceSets.getByName("main").output.classesDirs.singleFile)
@@ -24,8 +30,8 @@ tasks.test {
     useJUnitPlatform()
 
     testLogging {
-        outputs.upToDateWhen { false }
-        showStandardStreams = true
+//        outputs.upToDateWhen { false }
+//        showStandardStreams = true
     }
 }
 
