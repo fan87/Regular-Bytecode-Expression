@@ -7,11 +7,12 @@ internal class MatchingInstance constructor(
     val parentStartIndex: Int,
     val startIndex: Int,
     var nestedLevel: Int,
-    val elements: MutableList<RegbexMatchElement>,
+    var elements: MutableList<RegbexMatchElement>,
     val matcher: RegbexMatcher,
     var onFailed: () -> Unit,
     var onSuccess: (matched: RegbexRegion, captured: ArrayList<RegbexRegion>, capturedNamed: HashMap<String, RegbexRegion>) -> Boolean,
     var goBackSender: ((target: Int) -> Unit)? = null,
+    var _addFallBackOptionSender: ((() -> Unit) -> Unit)? = null,
     var onProvided: (index: Int, instruction: AbstractInsnNode, last: Boolean) -> Unit = {_, _, _ -> },
     var onEndOfFile: () -> Unit = {},
     var environmentCapturedNamed: HashMap<String, RegbexRegion> = HashMap(),
@@ -20,16 +21,60 @@ internal class MatchingInstance constructor(
 
     var goBackRequest = -1
 
-    val matched = RegbexRegion(startIndex, startIndex)
-    val capturedNamed = HashMap<String, RegbexRegion>()
-    val captured = ArrayList<RegbexRegion>()
+    var matched = RegbexRegion(startIndex, startIndex)
+    var capturedNamed = HashMap<String, RegbexRegion>()
+    var captured = ArrayList<RegbexRegion>()
 
     var currentElementIndex: Int = 0
 
-    val waiting = ArrayList<MatchingInstance>()
+    var waiting = ArrayList<MatchingInstance>()
 
     var hasFailed = false
     var hasSucceeded = false
+
+    val fallbackOptions = ArrayList<() -> Unit>()
+
+    private fun addFallbackOption(action: () -> Unit) {
+        if (this._addFallBackOptionSender == null) {
+            fallbackOptions.add(action)
+        } else {
+            val waiting = ArrayList(waiting)
+            val matched = matched
+            val capturedNamed = capturedNamed
+            val captured = captured
+            val environmentCaptured = environmentCaptured
+            val environmentCapturedNamed = environmentCapturedNamed
+            val onEndOfFile = onEndOfFile
+            val onProvided = onProvided
+            val _addFallBackOptionSender = _addFallBackOptionSender
+            val onSuccess = onSuccess
+            val goBackSender = goBackSender
+            val onFailed = onFailed
+            val currentElementIndex = currentElementIndex
+            val hasSucceeded = hasSucceeded
+            val hasFailed = hasFailed
+            val elements = ArrayList(elements)
+            _addFallBackOptionSender!! {
+                this.waiting = waiting
+                this.matched = matched
+                this.capturedNamed = capturedNamed
+                this.captured = captured
+                this.environmentCaptured = environmentCaptured
+                this.environmentCapturedNamed = environmentCapturedNamed
+                this.onEndOfFile = onEndOfFile
+                this.onProvided = onProvided
+                this._addFallBackOptionSender = _addFallBackOptionSender
+                this.onSuccess = onSuccess
+                this.goBackSender = goBackSender
+                this.onFailed = onFailed
+                this.currentElementIndex = currentElementIndex
+                this.elements = elements
+                this.hasFailed = hasFailed
+                this.hasSucceeded = hasSucceeded
+                action()
+            }
+        }
+    }
 
     private fun goBack(target: Int) {
         if (goBackSender == null) {
@@ -41,6 +86,14 @@ internal class MatchingInstance constructor(
 
     private fun failed() {
         if (!hasSucceeded && !hasFailed) {
+            if (fallbackOptions.isNotEmpty()) {
+                for (fallbackOption in fallbackOptions) {
+                    fallbackOption()
+                    if (hasSucceeded) {
+                        return
+                    }
+                }
+            }
             hasFailed = true
             onFailed()
         } else {
@@ -126,7 +179,7 @@ internal class MatchingInstance constructor(
                 matcher,
                 onFailed,
                 {_, _, _ -> true},
-                this::goBack
+                this::goBack, _addFallBackOptionSender
             )
             instance.environmentCapturedNamed = HashMap(capturedNamed)
             instance.environmentCaptured = ArrayList(captured)
@@ -163,7 +216,7 @@ internal class MatchingInstance constructor(
                 matcher,
                 {},
                 { _, _, _ -> true},
-                this::goBack
+                this::goBack, _addFallBackOptionSender
             )
             instance.environmentCapturedNamed = HashMap(capturedNamed)
             instance.environmentCaptured = ArrayList(captured)
@@ -249,7 +302,7 @@ internal class MatchingInstance constructor(
                     matcher,
                     {},
                     {_, _, _ -> true},
-                    this::goBack
+                    this::goBack, _addFallBackOptionSender
                 )
                 instance.environmentCapturedNamed = HashMap(capturedNamed)
                 instance.environmentCaptured = ArrayList(captured)
@@ -355,7 +408,7 @@ internal class MatchingInstance constructor(
                 matcher,
                 {  },
                 {_, _, _ -> failed(); true},
-                this::goBack
+                this::goBack, _addFallBackOptionSender
             )
             instance.environmentCapturedNamed = HashMap(capturedNamed)
             instance.environmentCaptured = ArrayList(captured)
@@ -389,7 +442,7 @@ internal class MatchingInstance constructor(
                 matcher,
                 {},
                 { _, _, _ -> true},
-                this::goBack
+                this::goBack, _addFallBackOptionSender
             )
             instance.environmentCapturedNamed = HashMap(capturedNamed)
             instance.environmentCaptured = ArrayList(captured)
@@ -398,44 +451,42 @@ internal class MatchingInstance constructor(
             var tracingBack = false
             var counter = 0
 
-            instance.onFailed = onFailed@{
+            addFallbackOption {
                 if (matchedPosition.isEmpty()) {
                     failed()
-                    return@onFailed
+                    return@addFallbackOption
                 }
                 tracingBack = true
-                instance.elements.clear()
-                instance.currentElementIndex = 0
-                instance.elements.addAll(elements.subList(currentElementIndex, elements.size))
-                println("=========== Went Back at index: ${instance.matched.end} / ${instance.elements.size} ===========")
-                instance.matched.end = matchedPosition.removeLast() - 1
-                goBack(instance.matched.end)
-                println("to ${instance.matched.end}")
+                val newIndex = matchedPosition.removeLast() - 1
+                println("=========== Went Back at index: $newIndex / ${instance.elements.size} ===========")
+
+                goBack(newIndex)
+
+                waiting.clear()
+                this.matched.end = matched.end
+                for (mutableEntry in capturedNamed) {
+                    this.capturedNamed[mutableEntry.key] = mutableEntry.value
+                }
+                for (abstractInsnNodes in captured) {
+                    this.captured.add(abstractInsnNodes)
+                }
+                this.captured.add(matched)
                 instance.hasFailed = false
                 instance.hasSucceeded = false
             }
 
+            instance.onFailed =  {
+                failed()
+            }
 
             instance.onEndOfFile = {
-                if (!instance.hasFailed) {
+                if (!instance.hasFailed && !tracingBack) {
                     instance.failed()
                 }
             }
 
             instance.onSuccess = onSuccess@{ matched, captured, capturedNamed ->
-                if (tracingBack) {
-                    this.matched.end = matched.end
-                    for (mutableEntry in capturedNamed) {
-                        this.capturedNamed[mutableEntry.key] = mutableEntry.value
-                    }
-                    for (abstractInsnNodes in captured) {
-                        this.captured.add(abstractInsnNodes)
-                    }
-                    this.captured.add(matched)
-                    instance.hasFailed = false
-                    instance.hasSucceeded = false
-                    success(this.matched, this.captured, this.capturedNamed)
-                } else {
+                if (!tracingBack) {
                     counter++
                     if (counter in currentElement.range) {
                         matchedPosition.add(matched.end)
