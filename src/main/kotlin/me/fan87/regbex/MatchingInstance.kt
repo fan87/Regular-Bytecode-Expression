@@ -329,6 +329,38 @@ internal class MatchingInstance constructor(
 
             return
         }
+        if (currentElement is Not) {
+            val instance = MatchingInstance(
+                parentStartIndex,
+                index,
+                nestedLevel + 1,
+                ArrayList(currentElement.regbex.elements),
+                matcher,
+                goBack,
+                {  },
+                {_, _, _ -> failed(); true}
+            )
+            instance.onFailed = {
+                waiting.clear()
+                this.matched.end = instance.matched.end
+                for (mutableEntry in instance.capturedNamed) {
+                    this.capturedNamed[mutableEntry.key] = mutableEntry.value
+                }
+                for (abstractInsnNodes in instance.captured) {
+                    this.captured.add(abstractInsnNodes)
+                }
+                this.captured.add(matched)
+                true
+            }
+            waiting.add(instance)
+            //println(getIndent() + "Started nested group instance ${currentElement.name}")
+            instance.provideNext(index, instruction, last)
+            nextElement()
+            if (instance.hasFailed && currentElement() == null) {
+                success(matched, captured, capturedNamed)
+            }
+            return
+        }
 
 
     }
