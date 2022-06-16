@@ -1,6 +1,7 @@
 package me.fan87.regbex
 
 import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
 
 class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode>, private val pattern: RegbexPattern) {
 
@@ -26,6 +27,21 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return next(startIndex, Int.MAX_VALUE)
     }
 
+    private fun provideNext(index: Int, insn: AbstractInsnNode, matchingInstance: MatchingInstance, target: List<AbstractInsnNode>): Boolean {
+        matchingInstance.provideNext(index, insn, index == target.size - 1)
+        if (matchedAny) {
+            return true
+        }
+        if (matchingInstance.goBackRequest != -1) {
+            val it = matchingInstance.goBackRequest
+            matchingInstance.goBackRequest = -1
+            for (i in it + 1..index) {
+                provideNext(i, target[i], matchingInstance, target)
+            }
+        }
+        return false
+    }
+
     fun next(startIndex: Int, instanceLimit: Int): Boolean {
         this.startFindingIndex = startIndex
         val regbex = pattern.regbex
@@ -33,22 +49,17 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         val matchingInstances = ArrayList<MatchingInstance>()
         var created = 0
         var index = 0
-        var newIndex = 0
         while (index in 0 until target.size) {
-            newIndex = index
             val insn = target[index]
             for (matchingInstance in ArrayList(matchingInstances)) {
-                matchingInstance.provideNext(index, insn, index == target.size - 1)
-                if (matchedAny) {
+                if (provideNext(index, insn, matchingInstance, target)) {
                     return true
                 }
             }
 
             if (created < instanceLimit) {
                 created++
-                val matchingInstance = MatchingInstance(index, index, 0, ArrayList(regbex.elements), this, {
-                    newIndex = it
-                }, {}, {_, _, _ -> true})
+                val matchingInstance = MatchingInstance(index, index, 0, ArrayList(regbex.elements), this, {}, {_, _, _ -> true})
                 matchingInstance.onSuccess = { matched, captured, capturedNamed ->
                     this.matched = matched
                     this.captured = captured
@@ -64,18 +75,23 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 }
 
                 matchingInstances.add(matchingInstance)
-                matchingInstance.provideNext(index, insn, index == target.size - 1)
+                if (provideNext(index, insn, matchingInstance, target)) {
+                    return true
+                }
             }
-            if (matchedAny) {
-                return true
-            }
-            index = newIndex
             index++
         }
         for (matchingInstance in ArrayList(matchingInstances)) {
             matchingInstance.endOfFile()
             if (matchedAny) {
                 return true
+            }
+            if (matchingInstance.goBackRequest != -1) {
+                val it = matchingInstance.goBackRequest
+                matchingInstance.goBackRequest = -1
+                for (i in it + 1..index - 1) {
+                    provideNext(i, target[i], matchingInstance, target)
+                }
             }
         }
         matchedAny = false

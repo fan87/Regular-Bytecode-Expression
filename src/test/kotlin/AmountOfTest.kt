@@ -24,7 +24,7 @@ class AmountOfTest {
             }
         }.matcher(instructions)
 
-        assertTrue(matcher.next(0, 1))
+        assertTrue(matcher.next(0))
     }
 
     @Test

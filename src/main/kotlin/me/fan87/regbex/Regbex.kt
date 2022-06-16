@@ -9,14 +9,15 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 
 internal interface RegbexMatchElement
-internal class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement
-internal class Group(var regbex: Regbex, var name: String? = null): RegbexMatchElement
-internal class AmountOf(var range: IntProgression, var regbex: Regbex): RegbexMatchElement
-internal class Or(vararg var regbex: Regbex): RegbexMatchElement
-internal class And(vararg var regbex: Regbex): RegbexMatchElement
-internal class Not(var regbex: Regbex): RegbexMatchElement
-internal class AnyAmountOf(var regbex: Regbex): RegbexMatchElement
-internal class CapturedGroup(var name: String): RegbexMatchElement
+internal open class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement
+internal open class AnyCheck(): CustomCheck({true})
+internal open class Group(var regbex: Regbex, var name: String? = null): RegbexMatchElement
+internal open class AmountOf(var range: IntProgression, var regbex: Regbex): RegbexMatchElement
+internal open class Or(vararg var regbex: Regbex): RegbexMatchElement
+internal open class And(vararg var regbex: Regbex): RegbexMatchElement
+internal open class Not(var regbex: Regbex): RegbexMatchElement
+internal open class GreedyAmountOf(var range: IntProgression, var regbex: Regbex): RegbexMatchElement
+internal open class CapturedGroup(var name: String): RegbexMatchElement
 
 class Regbex {
 
@@ -53,8 +54,15 @@ class Regbex {
         elements.add(CapturedGroup(name))
     }
 
-    fun thenAnyAmountOf(regbex: RegbexBuilder) {
-        elements.add(AnyAmountOf(Regbex().also { it.regbex() }))
+    fun thenGreedyAmountOf(range: IntProgression, regbex: RegbexBuilder) {
+        elements.add(GreedyAmountOf(range, Regbex().also { it.regbex() }))
+    }
+
+
+    ////////// Debug Friendly Aliases //////////
+
+    fun thenAny() {
+        elements.add(AnyCheck())
     }
 
     ////////// Aliases //////////
@@ -62,15 +70,16 @@ class Regbex {
     fun thenAmountOf(amount: Int, regbex: RegbexBuilder) {
         thenAmountOf(amount..amount, regbex)
     }
+
+    // Greedy Operators (?, +, and *)
+    fun thenAnyAmountOf(regbex: RegbexBuilder) {
+        thenGreedyAmountOf(0..Int.MAX_VALUE, regbex)
+    }
     fun thenAtLeastOneOf(regbex: RegbexBuilder) {
-        thenAmountOf(1..Int.MAX_VALUE, regbex)
+        thenGreedyAmountOf(1..Int.MAX_VALUE, regbex)
     }
     fun thenOptional(regbex: RegbexBuilder) {
-        thenAmountOf(0..1, regbex)
-    }
-
-    fun thenAny() {
-        thenCustomCheck { true }
+        thenGreedyAmountOf(0..1, regbex)
     }
 
     ////////// Advanced Matching //////////

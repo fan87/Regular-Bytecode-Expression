@@ -63,7 +63,7 @@ class CapturedGroupTest {
             thenCapturedGroup("1")
         }.matcher(instructions)
 
-        assertFalse(matcher.next(0, 1))
+        assertFalse(matcher.next(0))
     }
 
 }
