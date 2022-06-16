@@ -34,6 +34,7 @@ class AndTest {
 
         assertTrue(matcher.next(0))
         assertEquals("Hello, World!", (matcher.group("printedMessage")!![0] as LdcInsnNode).cst)
+        assertEquals(matcher.group().size, 3)
     }
     @Test
     internal fun andTestB() {
@@ -46,6 +47,7 @@ class AndTest {
         }.matcher(instructions)
 
         assertTrue(matcher.next(0))
+        assertEquals(matcher.group().size, 1)
     }
 
 

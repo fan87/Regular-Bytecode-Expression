@@ -13,11 +13,10 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     }
 
 
-    private var capturedNamed = HashMap<String, List<AbstractInsnNode>>()
-    private var captured = ArrayList<List<AbstractInsnNode>>()
+    private var capturedNamed = HashMap<String, RegbexRegion>()
+    private var captured = ArrayList<RegbexRegion>()
 
-    private var matched = ArrayList<AbstractInsnNode>()
-    private var matchedStartIndex = 0
+    private var matched: RegbexRegion? = null
     private var startFindingIndex = 0
 
     private var matchedAny = false
@@ -49,12 +48,14 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 val matchingInstance = MatchingInstance(index, index, 0, ArrayList(regbex.elements), this, {
                     newIndex = it
                 }, {}, {_, _, _ -> true})
-                matchingInstance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+                matchingInstance.onSuccess = { matched, captured, capturedNamed ->
                     this.matched = matched
                     this.captured = captured
                     this.capturedNamed = capturedNamed
                     this.matchedAny = true
-                    this.matchedStartIndex = matchingInstance.parentStartIndex
+                    if (matchingInstance.parentStartIndex != matched.start) {
+                        throw Exception("NO?")
+                    }
                     true
                 }
                 matchingInstance.onFailed = {
@@ -78,6 +79,45 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         }
         matchedAny = false
         return false
+    }
+
+
+    /**
+     * Get the inclusive start of a group
+     */
+    fun groupStart(groupName: String): Int? {
+        checkMatched()
+        return capturedNamed[groupName]?.start
+    }
+
+    /**
+     * Get the exclusive end of a group
+     */
+    fun groupEnd(groupName: String): Int? {
+        checkMatched()
+        return capturedNamed[groupName]?.end?.plus(1)
+    }
+
+    fun replaceGroup(groupName: String, replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
+        checkMatched()
+        if (group(groupName) == null) {
+            return ArrayList(instructions)
+        }
+        val newInstructions = ArrayList<AbstractInsnNode>()
+
+        for (instruction in instructions.withIndex()) {
+            val index = instruction.index
+            val insn = instruction.value
+
+            if (index < groupStart(groupName)!! || index >= groupEnd(groupName)!!) {
+                newInstructions.add(insn)
+                continue
+            }
+            if (index == groupStart(groupName)!!) {
+                newInstructions.addAll(replaceTo)
+            }
+        }
+        return newInstructions
     }
 
     fun replace(replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
@@ -104,7 +144,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
      */
     fun endIndex(): Int {
         checkMatched()
-        return matchedStartIndex + matched.size + startFindingIndex
+        return matched!!.end + startFindingIndex + 1
     }
 
     /**
@@ -112,7 +152,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
      */
     fun startIndex(): Int {
         checkMatched()
-        return startFindingIndex + matchedStartIndex
+        return matched!!.start + startFindingIndex
     }
 
     fun group(): List<AbstractInsnNode> {
@@ -125,14 +165,22 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
             return null
         }
         if (index <= 0) {
-            return matched
+            return getRegion(matched)
         }
-        return captured[index - 1]
+        return getRegion(captured[index - 1])
     }
 
     fun group(name: String): List<AbstractInsnNode>? {
         checkMatched()
-        return capturedNamed[name]
+        return getRegion(capturedNamed[name])
+    }
+
+    private fun getRegion(regbexRegion: RegbexRegion?): List<AbstractInsnNode>? {
+        if (regbexRegion == null) {
+            return null
+        }
+        checkMatched()
+        return instructions.subList(startFindingIndex + regbexRegion.start, startFindingIndex + regbexRegion.end + 1)
     }
 
     fun pattern(): RegbexPattern {

@@ -10,14 +10,14 @@ internal class MatchingInstance constructor(
     val matcher: RegbexMatcher,
     var goBack: (amount: Int) -> Unit,
     var onFailed: () -> Unit,
-    var onSuccess: (matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>>) -> Boolean,
+    var onSuccess: (matched: RegbexRegion, captured: ArrayList<RegbexRegion>, capturedNamed: HashMap<String, RegbexRegion>) -> Boolean,
     var onProvided: (index: Int, instruction: AbstractInsnNode, last: Boolean) -> Unit = {_, _, _ -> },
     var onEndOfFile: () -> Unit = {}
 ) {
 
-    val matched = ArrayList<AbstractInsnNode>()
-    val capturedNamed = HashMap<String, List<AbstractInsnNode>>()
-    val captured = ArrayList<List<AbstractInsnNode>>()
+    val matched = RegbexRegion(startIndex, startIndex)
+    val capturedNamed = HashMap<String, RegbexRegion>()
+    val captured = ArrayList<RegbexRegion>()
 
     var currentElementIndex: Int = 0
 
@@ -35,7 +35,7 @@ internal class MatchingInstance constructor(
         }
     }
 
-    private fun success(matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>>): Boolean {
+    private fun success(matched: RegbexRegion, captured: ArrayList<RegbexRegion>, capturedNamed: HashMap<String, RegbexRegion>): Boolean {
         if (!hasSucceeded && !hasFailed) {
             hasSucceeded = true
             return onSuccess(matched, captured, capturedNamed)
@@ -86,7 +86,7 @@ internal class MatchingInstance constructor(
         val currentElement = currentElement()
 
         onProvided(index, instruction, last)
-        matched.add(instruction)
+        matched.end = index
         //println(getIndent() + "Check ($currentElementIndex): ${currentElement?.javaClass?.simpleName}")
 
         if (currentElement is CustomCheck) {
@@ -112,9 +112,9 @@ internal class MatchingInstance constructor(
                 onFailed,
                 {_, _, _ -> true}
             )
-            instance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+            instance.onSuccess = { matched, captured, capturedNamed ->
                 waiting.clear()
-                this.matched.addAll(matched)
+                this.matched.end = matched.end
                 for (mutableEntry in capturedNamed) {
                     this.capturedNamed[mutableEntry.key] = mutableEntry.value
                 }
@@ -165,7 +165,7 @@ internal class MatchingInstance constructor(
                 }
                 //println(instance.getIndent() + "Removed from onFailed $lastEndIndex")
                 waiting.clear()
-                this.matched.addAll(instance.matched.subList(0, lastEndIndex - index - 1))
+                this.matched.end += lastEndIndex - index
                 for (mutableEntry in capturedNamed) {
                     this.capturedNamed[mutableEntry.key] = mutableEntry.value
                 }
@@ -173,7 +173,7 @@ internal class MatchingInstance constructor(
                     this.captured.add(abstractInsnNodes)
                 }
                 this.captured.add(matched)
-                instance.matched.clear()
+                instance.matched.end = instance.matched.start
 
                 goBack(lastEndIndex)
                 instance.hasFailed = false
@@ -191,7 +191,7 @@ internal class MatchingInstance constructor(
                     } else {
                         //println(instance.getIndent() + "Removed from onSuccess / $lastEndIndex")
                         waiting.clear()
-                        this.matched.addAll(matched.subList(0, lastEndIndex - index - 1))
+                        this.matched.end += lastEndIndex - index
                         for (mutableEntry in capturedNamed) {
                             this.capturedNamed[mutableEntry.key] = mutableEntry.value
                         }
@@ -199,7 +199,7 @@ internal class MatchingInstance constructor(
                             this.captured.add(abstractInsnNodes)
                         }
                         this.captured.add(matched)
-                        instance.matched.clear()
+                        instance.matched.end = instance.matched.start
 
                         goBack(lastEndIndex)
                         instance.hasSucceeded = true
@@ -207,7 +207,7 @@ internal class MatchingInstance constructor(
                     return@onSuccess false
                 }
                 if (counter in currentElement.range) {
-                    lastEndIndex = startIndex + matched.size
+                    lastEndIndex = startIndex + (matched.end - matched.start)
                 }
                 instance.currentElementIndex = 0
                 instance.hasSucceeded = false
@@ -241,9 +241,9 @@ internal class MatchingInstance constructor(
                     waiting.remove(instance)
                 }
 
-                instance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+                instance.onSuccess = { matched, captured, capturedNamed ->
                     waiting.clear()
-                    this.matched.addAll(matched)
+                    this.matched.end = matched.end
                     for (mutableEntry in capturedNamed) {
                         this.capturedNamed[mutableEntry.key] = mutableEntry.value
                     }
@@ -291,7 +291,7 @@ internal class MatchingInstance constructor(
                     failed()
                 }
 
-                instance.onSuccess = { matched: ArrayList<AbstractInsnNode>, captured: ArrayList<List<AbstractInsnNode>>, capturedNamed: HashMap<String, List<AbstractInsnNode>> ->
+                instance.onSuccess = { matched, captured, capturedNamed ->
                     waiting.remove(instance)
 
                     for (mutableEntry in capturedNamed) {
@@ -304,7 +304,7 @@ internal class MatchingInstance constructor(
 
                     succeeded++
                     if (succeeded == expected) { // if it's the last one that matches
-                        this.matched.addAll(matched)
+                        this.matched.end = matched.end
                     }
                     true
                 }
@@ -351,3 +351,4 @@ internal class MatchingInstance constructor(
     }
 
 }
+

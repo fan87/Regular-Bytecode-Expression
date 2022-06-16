@@ -22,7 +22,7 @@ A regular expression engine that's made for Java bytecode and objectweb ASM.
 
 ## Using
 ### Usage
-You can check `src/main/test/kotlin` for code example and usage.
+You can check the [Example Test Class](src/test/kotlin/Examples.kt) for code example and usage.
 
 ### Using it in Java
 If your codebase is in Java and you don't want to re-code your entire project, you can have classes in Kotlin that pre-defines
