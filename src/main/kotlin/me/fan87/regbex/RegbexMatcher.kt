@@ -17,7 +17,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     private var captured = ArrayList<RegbexRegion>()
 
     private var matched: RegbexRegion? = null
-    private var startFindingIndex = 0
+    internal var startFindingIndex = 0
 
     private var matchedAny = false
 
@@ -33,8 +33,9 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         val matchingInstances = ArrayList<MatchingInstance>()
         var created = 0
         var index = 0
+        var newIndex = 0
         while (index in 0 until target.size) {
-            var newIndex = index
+            newIndex = index
             val insn = target[index]
             for (matchingInstance in ArrayList(matchingInstances)) {
                 matchingInstance.provideNext(index, insn, index == target.size - 1)

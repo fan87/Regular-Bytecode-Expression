@@ -7,7 +7,6 @@ import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
-import java.util.regex.Matcher
 
 internal interface RegbexMatchElement
 internal class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement
@@ -17,8 +16,7 @@ internal class Or(vararg var regbex: Regbex): RegbexMatchElement
 internal class And(vararg var regbex: Regbex): RegbexMatchElement
 internal class Not(var regbex: Regbex): RegbexMatchElement
 internal class AnyAmountOf(var regbex: Regbex): RegbexMatchElement
-internal class CapturedGroup_Index(var index: Int): RegbexMatchElement
-internal class CapturedGroup_Name(var name: String): RegbexMatchElement
+internal class CapturedGroup(var name: String): RegbexMatchElement
 
 class Regbex {
 
@@ -26,10 +24,6 @@ class Regbex {
     internal val elements = ArrayList<RegbexMatchElement>()
 
     ////////// Basic Functions (Requires Implementation) //////////
-
-    fun thenGroup(regbex: RegbexBuilder) {
-        elements.add(Group(Regbex().also { it.regbex() }))
-    }
 
     fun thenGroup(name: String, regbex: RegbexBuilder) {
         elements.add(Group(Regbex().also { it.regbex() }, name))
@@ -55,12 +49,8 @@ class Regbex {
         elements.add(Not(Regbex().also { it.regbex() }))
     }
 
-    fun thenCapturedGroup(index: Int) {
-        elements.add(CapturedGroup_Index(index))
-    }
-
     fun thenCapturedGroup(name: String) {
-        elements.add(CapturedGroup_Name(name))
+        elements.add(CapturedGroup(name))
     }
 
     fun thenAnyAmountOf(regbex: RegbexBuilder) {
@@ -68,7 +58,6 @@ class Regbex {
     }
 
     ////////// Aliases //////////
-    fun thenNamedGroup(name: String, regbex: RegbexBuilder) = thenGroup(name, regbex)
 
     fun thenAmountOf(amount: Int, regbex: RegbexBuilder) {
         thenAmountOf(amount..amount, regbex)

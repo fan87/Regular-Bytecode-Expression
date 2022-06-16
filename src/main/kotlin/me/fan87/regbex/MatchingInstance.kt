@@ -1,18 +1,22 @@
 package me.fan87.regbex
 
+import me.fan87.regbex.utils.InstructionEqualChecker
 import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
 
 internal class MatchingInstance constructor(
     val parentStartIndex: Int,
     val startIndex: Int,
     var nestedLevel: Int,
-    val elements: List<RegbexMatchElement>,
+    val elements: MutableList<RegbexMatchElement>,
     val matcher: RegbexMatcher,
     var goBack: (amount: Int) -> Unit,
     var onFailed: () -> Unit,
     var onSuccess: (matched: RegbexRegion, captured: ArrayList<RegbexRegion>, capturedNamed: HashMap<String, RegbexRegion>) -> Boolean,
     var onProvided: (index: Int, instruction: AbstractInsnNode, last: Boolean) -> Unit = {_, _, _ -> },
-    var onEndOfFile: () -> Unit = {}
+    var onEndOfFile: () -> Unit = {},
+    var environmentCapturedNamed: HashMap<String, RegbexRegion> = HashMap(),
+    var environmentCaptured: ArrayList<RegbexRegion> = ArrayList(),
 ) {
 
     val matched = RegbexRegion(startIndex, startIndex)
@@ -65,7 +69,7 @@ internal class MatchingInstance constructor(
     }
 
     fun provideNext(index: Int, instruction: AbstractInsnNode, last: Boolean) {
-        println("${getIndent()}[B] Index: $index ($last)")
+        //println("${getIndent()}[B] Index: $index ($last)")
         if (waiting.isNotEmpty()) {
             for (matchingInstance in ArrayList(waiting)) {
                 matchingInstance.provideNext(index, instruction, last)
@@ -81,7 +85,7 @@ internal class MatchingInstance constructor(
             }
             return
         }
-        println("${getIndent()}[A] Index: $index")
+        //println("${getIndent()}[A] Index: $index")
 
         val currentElement = currentElement()
 
@@ -112,6 +116,8 @@ internal class MatchingInstance constructor(
                 onFailed,
                 {_, _, _ -> true}
             )
+            instance.environmentCapturedNamed = HashMap(capturedNamed)
+            instance.environmentCaptured = ArrayList(captured)
             instance.onSuccess = { matched, captured, capturedNamed ->
                 waiting.clear()
                 this.matched.end = matched.end
@@ -146,7 +152,8 @@ internal class MatchingInstance constructor(
                 goBack,
                 {},
                 { _, _, _ -> true})
-
+            instance.environmentCapturedNamed = HashMap(capturedNamed)
+            instance.environmentCaptured = ArrayList(captured)
             var startIndex = index
             var counter = 0
             // Exclusive
@@ -154,7 +161,6 @@ internal class MatchingInstance constructor(
 
 
             instance.onFailed = onFailed@{
-                //println(instance.getIndent() + "Failed: $counter / ${currentElement.range}")
                 if (counter < currentElement.range.first) {
                     failed()
                     return@onFailed
@@ -163,7 +169,6 @@ internal class MatchingInstance constructor(
                     failed()
                     return@onFailed
                 }
-                //println(instance.getIndent() + "Removed from onFailed $lastEndIndex")
                 waiting.clear()
                 this.matched.end += lastEndIndex - index
                 for (mutableEntry in capturedNamed) {
@@ -184,12 +189,10 @@ internal class MatchingInstance constructor(
             }
             instance.onSuccess = onSuccess@{ matched, captured, capturedNamed ->
                 counter++
-                //println(instance.getIndent() + "Success: $counter / ${currentElement.range}")
                 if (counter > currentElement.range.last) {
                     if (lastEndIndex == -1) {
                         failed()
                     } else {
-                        //println(instance.getIndent() + "Removed from onSuccess / $lastEndIndex")
                         waiting.clear()
                         this.matched.end += lastEndIndex - index
                         for (mutableEntry in capturedNamed) {
@@ -211,12 +214,10 @@ internal class MatchingInstance constructor(
                 }
                 instance.currentElementIndex = 0
                 instance.hasSucceeded = false
-                //println(instance.getIndent() + "Succeeded! Going back to loop")
 
                 false
             }
             waiting.add(instance)
-            //println(getIndent() + "Started nested amountOf instance")
             instance.provideNext(index, instruction, last)
             nextElement()
             return
@@ -236,7 +237,8 @@ internal class MatchingInstance constructor(
                     {},
                     {_, _, _ -> true}
                 )
-
+                instance.environmentCapturedNamed = HashMap(capturedNamed)
+                instance.environmentCaptured = ArrayList(captured)
                 instance.onFailed = {
                     waiting.remove(instance)
                 }
@@ -285,7 +287,8 @@ internal class MatchingInstance constructor(
                     {},
                     {_, _, _ -> true}
                 )
-
+                instance.environmentCapturedNamed = HashMap(capturedNamed)
+                instance.environmentCaptured = ArrayList(captured)
                 instance.onFailed = {
                     waiting.remove(instance)
                     failed()
@@ -340,6 +343,8 @@ internal class MatchingInstance constructor(
                 {  },
                 {_, _, _ -> failed(); true}
             )
+            instance.environmentCapturedNamed = HashMap(capturedNamed)
+            instance.environmentCaptured = ArrayList(captured)
             instance.onFailed = {
                 waiting.clear()
                 this.matched.end = instance.matched.end
@@ -353,7 +358,7 @@ internal class MatchingInstance constructor(
                 true
             }
             waiting.add(instance)
-            //println(getIndent() + "Started nested group instance ${currentElement.name}")
+            //println(getIndent() + "Started not group instance")
             instance.provideNext(index, instruction, last)
             nextElement()
             if (instance.hasFailed && currentElement() == null) {
@@ -361,7 +366,26 @@ internal class MatchingInstance constructor(
             }
             return
         }
+        if (currentElement is CapturedGroup) {
 
+            val toCheck = ArrayList<AbstractInsnNode>()
+
+            var regbexRegion = capturedNamed[currentElement.name]
+            if (regbexRegion == null) {
+                regbexRegion = environmentCapturedNamed[currentElement.name]
+            }
+            if (regbexRegion == null) {
+                failed()
+                return
+            }
+            toCheck.addAll(matcher.instructions.subList(matcher.startFindingIndex + regbexRegion.start, matcher.startFindingIndex + regbexRegion.end + 1))
+
+            for (abstractInsnNode in toCheck.reversed()) {
+                elements.add(currentElementIndex + 1, CustomCheck{ InstructionEqualChecker.checkEquals(it, abstractInsnNode) })
+            }
+            nextElement()
+            provideNext(index, instruction, last)
+        }
 
     }
 

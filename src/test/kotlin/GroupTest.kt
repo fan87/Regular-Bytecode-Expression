@@ -53,7 +53,7 @@ class GroupTest {
             thenCustomCheck {
                 it.opcode == Opcodes.INVOKESTATIC
             }
-            thenGroup {
+            thenGroup("") {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKESTATIC
                 }
