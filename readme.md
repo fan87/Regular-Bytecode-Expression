@@ -15,10 +15,9 @@ A regular expression engine that's made for Java bytecode and objectweb ASM.
 
 ########## Since it's WIP, here's a list of all missing features in this version ##########
 
-4. and
-5. not
-6. any amount of (`*`)
-7. captured group (not capturing group, but using already captured group, equivalent to `\1`, `\2` in regex)
+4. not
+5. any amount of (`*`)
+6. captured group (not capturing group, but using already captured group, equivalent to `\1`, `\2` in regex)
 
 
 ## Using
