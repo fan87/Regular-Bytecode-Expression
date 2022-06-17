@@ -21,9 +21,11 @@ repositories {
 }
 
 dependencies {
-    implementation "com.github.fan87:Regular-Bytecode-Expression:Tag"
+    implementation "com.github.fan87:Regular-Bytecode-Expression:<vesion>"
 }
 ```
+
+You can find all available versions in GitHub release tab
 
 ### Use Case
 Let's say you want to do string obfuscation. Normally you would have to have a main for loop, a few if checks.
