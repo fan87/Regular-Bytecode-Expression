@@ -13,6 +13,18 @@ negative look-around would be impossible. Will add that later)
 
 
 ## Using
+### Getting Started
+Use jitpack:
+```kotlin
+repositories {
+    maven { url ("https://jitpack.io") }
+}
+
+dependencies {
+    implementation "com.github.fan87:Regular-Bytecode-Expression:Tag"
+}
+```
+
 ### Use Case
 Let's say you want to do string obfuscation. Normally you would have to have a main for loop, a few if checks.
 But not anymore! With this library, you can match every LdcString, and replace them to obfuscated string.
