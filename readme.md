@@ -15,17 +15,48 @@ negative look-around would be impossible. Will add that later)
 ## Using
 ### Getting Started
 Use jitpack:
+
+Gradle (Kotlin)
 ```kotlin
 repositories {
+    ...
     maven { url ("https://jitpack.io") }
 }
 
 dependencies {
-    implementation "com.github.fan87:Regular-Bytecode-Expression:<vesion>"
+    implementation("com.github.fan87:Regular-Bytecode-Expression:<version>")
 }
 ```
 
-You can find all available versions in GitHub release tab
+Gradle (Groovy)
+```groovy
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+dependencies {
+    implementation 'com.github.fan87:Regular-Bytecode-Expression:<version>'
+}
+```
+
+Maven
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+<dependency>
+    <groupId>com.github.fan87</groupId>
+    <artifactId>Regular-Bytecode-Expression</artifactId>
+    <version><version></version>
+</dependency>
+```
+
+You could always find all available versions in GitHub release tab
 
 ### Use Case
 Let's say you want to do string obfuscation. Normally you would have to have a main for loop, a few if checks.
