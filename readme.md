@@ -1,5 +1,3 @@
-# WIP
-This thing is still in progress, and planned to be finished on 6/17/22
 # Regular Bytecode Expression (regbex)
 
 > ⚠️ This library should only be used in Kotlin - at least for Regbex builders.
@@ -10,10 +8,20 @@ A regular expression engine that's made for Java bytecode and objectweb ASM.
 
 
 ## Missing Features / Known Issues
-1. Look-Behind & Look-After (Won't add for now)
+1. Look-Behind & Look-After (Won't add for now) (Can be replaced with `thenCheckWithoutMovingPointer`, but 
+negative look-around would be impossible. Will add that later)
 
 
 ## Using
+### Use Case
+Let's say you want to do string obfuscation. Normally you would have to have a main for loop, a few if checks.
+But not anymore! With this library, you can match every LdcString, and replace them to obfuscated string.
+
+Not only that, let's say you want to match a `System.out.println("" /*Ldc String*/")`, normally you have to
+save the current instruction index, have a main for loop, a lot of if check, but now you could just match 
+getstatic, ldcstring, and method call, capture the ldc string, and that's where and what the string is, no for loop,
+only a few lines of code
+
 ### Usage
 You can check the [Example Test Class](src/test/kotlin/Examples.kt) for code example and usage.
 
@@ -34,6 +42,9 @@ you shouldn't do that.
 
 ### Efficiency
 Just like regular expression, it's not designed to be high efficient, but to make your life easier.
+
+In theory, it should be as fast as regex engines, bcs what I'm doing is (probably) how most regex engines are
+implemented.
 
 ### Confused?
 Please read the KDoc (Like JavaDoc, but for Kotlin) if any function is confusing you. For example, using `TypeExpression`
