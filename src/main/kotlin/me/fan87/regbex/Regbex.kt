@@ -1,5 +1,6 @@
 package me.fan87.regbex
 
+import me.fan87.regbex.utils.InstructionEqualChecker
 import me.fan87.regbex.utils.MethodArgumentsTypeReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
@@ -8,16 +9,30 @@ import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 
-internal interface RegbexMatchElement
-internal open class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement
-internal open class AnyCheck(): CustomCheck({true})
-internal open class Group(var regbex: Regbex, var name: String? = null): RegbexMatchElement
-internal open class AmountOf(var range: IntProgression, var regbex: Regbex): RegbexMatchElement
-internal open class Or(vararg var regbex: Regbex): RegbexMatchElement
-internal open class And(vararg var regbex: Regbex): RegbexMatchElement
-internal open class Not(var regbex: Regbex): RegbexMatchElement
-internal open class GreedyAmountOf(var range: IntProgression, var regbex: Regbex): RegbexMatchElement
-internal open class CapturedGroup(var name: String): RegbexMatchElement
+internal open class RegbexMatchElement {
+    override fun toString(): String {
+        return javaClass.simpleName
+    }
+}
+internal data class CustomCheck(var check: (instruction: AbstractInsnNode) -> Boolean): RegbexMatchElement()
+
+internal data class GroupBegin(var name: String): RegbexMatchElement()
+internal open class GroupEnd: RegbexMatchElement()
+
+internal open class CheckWithoutMovingPointerBegin : RegbexMatchElement()
+internal open class CheckWithoutMovingPointerEnd: RegbexMatchElement()
+
+internal open class StartOfInstructions : RegbexMatchElement()
+internal open class EndOfInstructions: RegbexMatchElement()
+
+internal data class CapturedGroup(var name: String): RegbexMatchElement()
+
+internal data class LazyAmountOfBegin(var range: IntProgression): RegbexMatchElement()
+internal open class LazyAmountOfEnd : RegbexMatchElement()
+
+internal data class GreedyAmountOfBegin(var range: IntProgression): RegbexMatchElement()
+internal open class GreedyAmountOfEnd: RegbexMatchElement()
+
 
 class Regbex {
 
@@ -27,59 +42,88 @@ class Regbex {
     ////////// Basic Functions (Requires Implementation) //////////
 
     fun thenGroup(name: String, regbex: RegbexBuilder) {
-        elements.add(Group(Regbex().also { it.regbex() }, name))
+        elements.add(GroupBegin(name))
+        elements.addAll(regbex.getRegbex().elements)
+        elements.add(GroupEnd())
     }
 
     fun thenCustomCheck(check: (instruction: AbstractInsnNode) -> Boolean) {
         elements.add(CustomCheck(check))
     }
 
-    fun thenAmountOf(range: IntProgression, regbex: RegbexBuilder) {
-        elements.add(AmountOf(range, Regbex().also { it.regbex() }))
-    }
-
-    fun thenOr(vararg regbex: RegbexBuilder) {
-        elements.add(Or(*regbex.map { it -> Regbex().also { r -> r.it() } }.toTypedArray()))
-    }
-
-    fun thenAnd(vararg regbex: RegbexBuilder) {
-        elements.add(And(*regbex.map { it -> Regbex().also { r -> r.it() } }.toTypedArray()))
-    }
-
-    fun thenNot(regbex: RegbexBuilder) {
-        elements.add(Not(Regbex().also { it.regbex() }))
+    fun thenLazyAmountOf(range: IntProgression, regbex: RegbexBuilder) {
+        elements.add(LazyAmountOfBegin(range))
+        elements.addAll(regbex.getRegbex().elements)
+        elements.add(LazyAmountOfEnd())
     }
 
     fun thenCapturedGroup(name: String) {
         elements.add(CapturedGroup(name))
     }
 
-    fun thenGreedyAmountOf(range: IntProgression, regbex: RegbexBuilder) {
-        elements.add(GreedyAmountOf(range, Regbex().also { it.regbex() }))
+    fun thenAmountOf(range: IntProgression, regbex: RegbexBuilder) {
+        elements.add(GreedyAmountOfBegin(range))
+        elements.addAll(regbex.getRegbex().elements)
+        elements.add(GreedyAmountOfEnd())
     }
 
+    fun thenCheckWithoutMovingPointer(regbex: RegbexBuilder) {
+        elements.add(CheckWithoutMovingPointerBegin())
+        elements.addAll(regbex.getRegbex().elements)
+        elements.add(CheckWithoutMovingPointerEnd())
+    }
+
+    fun thenStartOfInstructions() {
+        elements.add(StartOfInstructions())
+    }
+    fun thenEndOfInstructions() {
+        elements.add(EndOfInstructions())
+    }
 
     ////////// Debug Friendly Aliases //////////
 
     fun thenAny() {
-        elements.add(AnyCheck())
+        thenCustomCheck { true }
     }
 
     ////////// Aliases //////////
+
+
+    fun thenLazyAmountOf(amount: Int, regbex: RegbexBuilder) {
+        thenLazyAmountOf(amount..amount, regbex)
+    }
 
     fun thenAmountOf(amount: Int, regbex: RegbexBuilder) {
         thenAmountOf(amount..amount, regbex)
     }
 
-    // Greedy Operators (?, +, and *)
-    fun thenAnyAmountOf(regbex: RegbexBuilder) {
-        thenGreedyAmountOf(0..Int.MAX_VALUE, regbex)
+    // Operators
+    fun thenAnyAmountOf(regbex: RegbexBuilder) { // *
+        thenAmountOf(0..Int.MAX_VALUE, regbex)
     }
-    fun thenAtLeastOneOf(regbex: RegbexBuilder) {
-        thenGreedyAmountOf(1..Int.MAX_VALUE, regbex)
+    fun thenAtLeastOneOf(regbex: RegbexBuilder) { // +
+        thenAmountOf(1..Int.MAX_VALUE, regbex)
     }
-    fun thenOptional(regbex: RegbexBuilder) {
-        thenGreedyAmountOf(0..1, regbex)
+    fun thenOptional(regbex: RegbexBuilder) { // ?
+        thenAmountOf(0..1, regbex)
+    }
+    // Lazy
+    fun thenLazyAnyAmountOf(regbex: RegbexBuilder) { // *?
+        thenLazyAmountOf(0..Int.MAX_VALUE, regbex)
+    }
+    fun thenLazyAtLeastOneOf(regbex: RegbexBuilder) { // +?
+        thenLazyAmountOf(1..Int.MAX_VALUE, regbex)
+    }
+
+
+    fun thenAnd(vararg regbexs: RegbexBuilder) {
+        val toList = regbexs.toList()
+        for (regbex in toList.dropLast(1)) {
+            thenCheckWithoutMovingPointer(regbex)
+        }
+        for (regbex in toList.drop(toList.size - 1)) {
+            elements.addAll(regbex.getRegbex().elements)
+        }
     }
 
     ////////// Advanced Matching //////////
@@ -91,6 +135,16 @@ class Regbex {
 
     fun thenTypeCheck(type: Class<out AbstractInsnNode?>) {
         thenCustomCheck { it.javaClass == type }
+    }
+
+    fun thenEqual(instruction: AbstractInsnNode) {
+        thenCustomCheck { InstructionEqualChecker.checkEquals(instruction, it) }
+    }
+
+    fun thenEqual(list: Iterable<AbstractInsnNode>) {
+        for (abstractInsnNode in list) {
+            thenEqual(abstractInsnNode)
+        }
     }
 
     //<editor-fold desc="Var Node" defaultstate="collapsed">
@@ -159,7 +213,6 @@ class Regbex {
     fun thenMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
         thenCustomCheck {
             if (it is MethodInsnNode) {
-                println("${ownerType.matches(it.owner)} (${it.owner}) / ${it.name.matches(methodNamePattern)} / ${returnType.matches(it.desc.split(")")[1])}")
                 ownerType.matches(it.owner) &&
                 it.name.matches(methodNamePattern) &&
                 returnType.matches(it.desc.split(")")[1])
@@ -222,6 +275,10 @@ class Regbex {
 
 typealias RegbexBuilder = Regbex.() -> Unit
 
+fun RegbexBuilder.getRegbex(): Regbex {
+    return Regbex().also { it.this() }
+}
+
 class TypeExp {
     private val matchCheck: (jvmClassName: String) -> Boolean
 
@@ -252,7 +309,7 @@ class TypeExp {
      */
     constructor(name: String) {
         val newName = name.replace(".", "/")
-        matchCheck = { println("Input: $it"); it == newName || it == "L$newName;" }
+        matchCheck = { it == newName || it == "L$newName;" }
     }
 
     /**
@@ -268,7 +325,7 @@ class TypeExp {
      * jvm type (`Ljava/lang/String;`), please expect those types as possible input
      */
     constructor(matchFunction: (jvmClassName: String) -> Boolean) {
-        this.matchCheck = matchFunction;
+        this.matchCheck = matchFunction
     }
 
     constructor(type: Class<*>): this(type.name)
@@ -284,10 +341,10 @@ enum class PrimitiveType(val sourceName: String, val jvmName: String, val object
     BOOLEAN("boolean", "Z", java.lang.Boolean::class.java, java.lang.Boolean.TYPE),
     BYTE("byte", "B", java.lang.Byte::class.java, java.lang.Byte.TYPE),
     SHORT("short", "S", java.lang.Short::class.java, java.lang.Short.TYPE),
-    INT("int", "I", java.lang.Integer::class.java, java.lang.Integer.TYPE),
-    CHAR("char", "C", java.lang.Character::class.java, java.lang.Character.TYPE),
+    INT("int", "I", java.lang.Integer::class.java, Integer.TYPE),
+    CHAR("char", "C", java.lang.Character::class.java, Character.TYPE),
     FLOAT("float", "F", java.lang.Float::class.java, java.lang.Float.TYPE),
     LONG("long", "J", java.lang.Long::class.java, java.lang.Long.TYPE),
     DOUBLE("double", "D", java.lang.Double::class.java, java.lang.Double.TYPE),
-    VOID("void", "V", java.lang.Void::class.java, java.lang.Void.TYPE),
+    VOID("void", "V", java.lang.Void::class.java, Void.TYPE),
 }

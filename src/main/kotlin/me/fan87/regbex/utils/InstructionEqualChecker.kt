@@ -14,7 +14,6 @@ object InstructionEqualChecker {
             if (Modifier.isFinal(field.modifiers)) continue
             if (!Modifier.isPublic(field.modifiers)) continue
             if (field[first] != field[second]) {
-                println("${field[first]} != ${field[second]}")
                 return false
             }
         }

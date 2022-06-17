@@ -2,12 +2,12 @@ package me.fan87.regbex
 
 /**
  * @param start Inclusive start
- * @param end Inclusive End
+ * @param end Exclusive End
  */
 class RegbexRegion(var start: Int, var end: Int) {
 
     fun size(): Int {
-        return end - start + 1
+        return end - start
     }
 
 }

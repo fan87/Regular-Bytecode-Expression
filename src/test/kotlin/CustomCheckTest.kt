@@ -24,7 +24,7 @@ class CustomCheckTest {
             }
         }.matcher(instructions)
 
-        assertTrue(matcher.next(0), "Should match InvokeVirtual")
+        assertTrue(matcher.next(0))
     }
 
     @Test

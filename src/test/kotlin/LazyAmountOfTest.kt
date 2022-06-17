@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class AmountOfTest {
+class LazyAmountOfTest {
 
     @Test
     internal fun amountOfTestA() {
@@ -17,7 +17,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKEVIRTUAL
                 }
@@ -35,7 +35,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKEVIRTUAL
                 }
@@ -55,7 +55,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKESTATIC
                 }
@@ -63,7 +63,7 @@ class AmountOfTest {
         }.matcher(instructions)
 
         assertTrue(matcher.next(0))
-        assertEquals(2, matcher.group(0)!!.size)
+        assertEquals(2, matcher.group().size)
     }
 
     @Test
@@ -73,7 +73,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKEVIRTUAL
                 }
@@ -92,7 +92,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKEVIRTUAL
                 }
@@ -103,7 +103,7 @@ class AmountOfTest {
         }.matcher(instructions)
 
         assertTrue(matcher.next(0))
-        assertEquals(4, matcher.group(0)!!.size)
+        assertEquals(4, matcher.group().size)
     }
 
     @Test
@@ -120,7 +120,7 @@ class AmountOfTest {
         }
 
         val matcher = RegbexPattern {
-            thenAmountOf(2) {
+            thenLazyAmountOf(2) {
                 thenCustomCheck {
                     it.opcode == Opcodes.INVOKEVIRTUAL
                 }
@@ -137,5 +137,33 @@ class AmountOfTest {
         assertTrue(matcher.next(matcher.endIndex()))
         assertEquals(8, matcher.endIndex())
         assertFalse(matcher.next(matcher.endIndex()))
+    }
+    @Test
+    internal fun amountOfTestG() {
+        val instructions = InsnList().apply {
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+        }
+
+        val matcher = RegbexPattern {
+            thenCustomCheck {
+                it.opcode == Opcodes.INVOKEVIRTUAL
+            }
+            thenLazyAnyAmountOf {
+                thenCustomCheck {
+                    it.opcode == Opcodes.INVOKESPECIAL
+                }
+            }
+            thenCustomCheck {
+                it.opcode == Opcodes.INVOKEVIRTUAL
+            }
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+        assertEquals(4, matcher.group().size)
     }
 }

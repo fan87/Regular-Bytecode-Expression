@@ -4,13 +4,12 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class AnyAmountOfTest {
+class GreedyTest {
 
     @Test
-    internal fun anyAmountOfTestA() {
+    internal fun greedyTestA() {
         val instructions = InsnList().apply {
             add(LdcInsnNode("A"))
             add(LdcInsnNode("B"))
@@ -37,7 +36,7 @@ class AnyAmountOfTest {
             thenLdcString()
         }.matcher(instructions)
 
-        assertTrue(matcher.next(0, 1))
+        assertTrue(matcher.next(0))
         assertEquals(instructions.size(), matcher.group().size)
     }
 

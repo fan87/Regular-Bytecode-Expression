@@ -12,12 +12,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class AndTest {
-
-
+class StartEndTest {
     
     @Test
-    internal fun andTestA() {
+    internal fun startEndTestA() {
         val instructions = InsnList().apply {
             add(FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"))
             add(LdcInsnNode("Hello, World!"))
@@ -25,11 +23,13 @@ class AndTest {
         }
 
         val matcher = RegbexPattern {
+            thenStartOfInstructions()
             thenGetStaticField(TypeExp(System::class.java), Regex.fromLiteral("out"), TypeExp(PrintStream::class.java))
             thenGroup("printedMessage") {
                 thenLdcString()
             }
             thenVirtualMethodCallIgnoreArgs(TypeExp(PrintStream::class.java), Regex.fromLiteral("println"), TypeExp(PrimitiveType.VOID))
+            thenEndOfInstructions()
         }.matcher(instructions)
 
         assertTrue(matcher.nextOnlyOne(0))
@@ -37,17 +37,34 @@ class AndTest {
         assertEquals(matcher.group().size, 3)
     }
     @Test
-    internal fun andTestB() {
+    internal fun startEndTestB() {
         val instructions = InsnList().apply {
+            add(LdcInsnNode("BEGIN"))
             add(FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"))
+            add(LdcInsnNode("END"))
+        }
+
+        val matcher = RegbexPattern {
+            thenStartOfInstructions()
+            thenGetStaticField(TypeExp(System::class.java), Regex.fromLiteral("out"), TypeExp(PrintStream::class.java))
+        }.matcher(instructions)
+
+        assertFalse(matcher.next(0))
+    }
+    @Test
+    internal fun startEndTestC() {
+        val instructions = InsnList().apply {
+            add(LdcInsnNode("BEGIN"))
+            add(FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"))
+            add(LdcInsnNode("END"))
         }
 
         val matcher = RegbexPattern {
             thenGetStaticField(TypeExp(System::class.java), Regex.fromLiteral("out"), TypeExp(PrintStream::class.java))
+            thenEndOfInstructions()
         }.matcher(instructions)
 
-        assertTrue(matcher.next(0))
-        assertEquals(1, matcher.group().size)
+        assertFalse(matcher.next(0))
     }
 
 

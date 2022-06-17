@@ -25,7 +25,7 @@ class CapturedGroupTest {
 
         val matcher = RegbexPattern {
             thenGroup("1") {
-                thenAmountOf(4) {
+                thenLazyAmountOf(4) {
                     thenLdcString()
                 }
             }
@@ -34,7 +34,7 @@ class CapturedGroupTest {
             thenCapturedGroup("1")
         }.matcher(instructions)
 
-        assertTrue(matcher.next(0, 1))
+        assertTrue(matcher.next(0))
         assertEquals(4, matcher.group("1")!!.size)
     }
     @Test
@@ -54,7 +54,7 @@ class CapturedGroupTest {
 
         val matcher = RegbexPattern {
             thenGroup("1") {
-                thenAmountOf(4) {
+                thenLazyAmountOf(4) {
                     thenLdcString()
                 }
             }
