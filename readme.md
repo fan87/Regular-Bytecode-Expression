@@ -75,8 +75,6 @@ Struggling to debug what's wrong with your regbex? You can enable debug mode by 
 (Or in java, `matcher.setDebug(true)`). It will print out all regbex elements, current regbex index, all instructions,
 current instructions index, and most importantly, the fail reason.
 
-You could also just print out `matcher.debugMessage` (Or in java, `matcher.getDebugMessage()`) if you don't want
-to print all debug messages out to terminal
 
 ### Using it in Java
 If your codebase is in Java and you don't want to re-code your entire project, you can have classes in Kotlin that pre-defines
