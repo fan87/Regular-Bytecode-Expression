@@ -1,6 +1,7 @@
 import me.fan87.regbex.PrimitiveType
 import me.fan87.regbex.RegbexPattern
 import me.fan87.regbex.TypeExp
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.objectweb.asm.Opcodes
@@ -17,6 +18,49 @@ import kotlin.test.assertTrue
  */
 class Examples {
 
+    /**
+     * This is actually from one of my project, and the bytecode is actually a part of Minecraft
+     */
+    @Test
+    @DisplayName("Minecraft - PatternB (Source: SpookySky)")
+    internal fun patternB() {
+        var instructions = ArrayList<AbstractInsnNode>().apply {
+            val l6 = LabelNode()
+            add(VarInsnNode(Opcodes.ALOAD, 0))
+            add(TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/client/gui/GuiScreen"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/client/Minecraft", "displayGuiScreen", "(Lnet/minecraft/client/gui/GuiScreen;)V"))
+//            add(l6)
+//            add(LineNumberNode(1259, l5))
+            add(VarInsnNode(Opcodes.ALOAD, 0))
+            add(IntInsnNode(Opcodes.SIPUSH, 10000))
+            add(FieldInsnNode(Opcodes.PUTFIELD, "net/minecraft/client/Minecraft", "leftClickCounter", "I"))
+        }
+
+        val pattern = RegbexPattern {
+            thenThis()
+            thenGroup("GuiScreen") {
+                thenOpcodeCheck(Opcodes.CHECKCAST)
+            }
+            thenGroup("displayGuiScreen") {
+                thenOpcodeCheck(Opcodes.INVOKEVIRTUAL)
+            }
+            thenAmountOf(0..4) {
+                thenAny()
+            }
+            thenThis()
+            thenPushInt(10000)
+            thenGroup("leftClickCounter") {
+                thenOpcodeCheck(Opcodes.PUTFIELD)
+            }
+        }
+
+        val matcher = pattern.matcher(instructions)
+        assertTrue(matcher.next(0, false))
+        assertEquals("net/minecraft/client/gui/GuiScreen", (matcher.group("GuiScreen")!![0] as TypeInsnNode).desc)
+        assertEquals("displayGuiScreen", (matcher.group("displayGuiScreen")!![0] as MethodInsnNode).name)
+        assertEquals("leftClickCounter", (matcher.group("leftClickCounter")!![0] as FieldInsnNode).name)
+    }
+
     @Test
     @DisplayName("Extract System.out text and replace")
     internal fun extractSoutAndReplace() {
@@ -32,7 +76,6 @@ class Examples {
             add(LdcInsnNode("BlahBlahBlah"))
             add(InsnNode(Opcodes.POP))
             add(InsnNode(Opcodes.POP))
-
         }
 
         val pattern = RegbexPattern {

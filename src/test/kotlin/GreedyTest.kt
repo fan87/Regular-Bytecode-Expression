@@ -39,5 +39,22 @@ class GreedyTest {
         assertTrue(matcher.next(0))
         assertEquals(instructions.size(), matcher.group().size)
     }
+    @Test
+    internal fun greedyTestB() {
+        val instructions = InsnList().apply {
+            add(LdcInsnNode("A"))
+            add(LdcInsnNode("C"))
+        }
+
+        val matcher = RegbexPattern {
+            thenLdcString()
+            thenAnyAmountOf {
+                thenPushInt(0)
+            }
+            thenLdcString()
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+    }
 
 }

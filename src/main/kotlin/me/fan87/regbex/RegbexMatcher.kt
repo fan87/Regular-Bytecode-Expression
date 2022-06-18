@@ -139,11 +139,11 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
      * Find the next match starts from [startIndex]
      */
     fun next(startIndex: Int): Boolean {
-        return next0(startIndex, true)
+        return next(startIndex, true)
     }
 
     fun matches(): Boolean {
-        val result = next0(0, false)
+        val result = next(0, false)
         if (!result) {
             return false
         }
@@ -173,7 +173,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     private var matchedAny = false
 
 
-    private fun next0(startIndex: Int, nested: Boolean): Boolean {
+    fun next(startIndex: Int, moveOnIfFail: Boolean): Boolean {
         elements = pattern.regbex.elements
         target = instructions.subList(startIndex, instructions.size)
 
@@ -255,6 +255,11 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                         }
                         if (currentElement is LazyAmountOfBegin) {
                             readStack.push(ReadStackElement(currentElement, elementIndex, instructionIndex))
+                            if (0 in currentElement.range) {
+                                elementIndex++
+                                fallbackStack.push(takeSnapshot())
+                                elementIndex = currentElement.endIndex // Go lazy
+                            }
                         }
                         if (currentElement is LazyAmountOfEnd) {
                             val groupBegin = popReadStack<LazyAmountOfBegin>()
@@ -276,6 +281,12 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                         }
                         if (currentElement is GreedyAmountOfBegin) {
                             readStack.push(ReadStackElement(currentElement, elementIndex, instructionIndex))
+                            if (0 in currentElement.range) {
+                                val oldIndex = elementIndex
+                                elementIndex = currentElement.endIndex
+                                fallbackStack.push(takeSnapshot())
+                                elementIndex = oldIndex
+                            }
                         }
                         if (currentElement is GreedyAmountOfEnd) {
                             val groupBegin = popReadStack<GreedyAmountOfBegin>()
@@ -333,9 +344,9 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                         continue@outer
                     }
 
-                    if (nested) {
+                    if (moveOnIfFail) {
                         for (i in startIndex+1 until instructions.size) {
-                            if (next0(i, false)) {
+                            if (next(i, false)) {
                                 return true
                             }
                         }

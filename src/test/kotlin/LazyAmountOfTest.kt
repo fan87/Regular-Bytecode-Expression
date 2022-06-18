@@ -166,4 +166,27 @@ class LazyAmountOfTest {
         assertTrue(matcher.next(0))
         assertEquals(4, matcher.group().size)
     }
+    @Test
+    internal fun amountOfTestH() {
+        val instructions = InsnList().apply {
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+            add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V"))
+        }
+
+        val matcher = RegbexPattern {
+            thenCustomCheck {
+                it.opcode == Opcodes.INVOKEVIRTUAL
+            }
+            thenLazyAmountOf(0..2) {
+                thenCustomCheck {
+                    it.opcode == Opcodes.INVOKESPECIAL
+                }
+            }
+            thenCustomCheck {
+                it.opcode == Opcodes.INVOKEVIRTUAL
+            }
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+    }
 }

@@ -28,10 +28,14 @@ internal open class EndOfInstructions: RegbexMatchElement()
 
 internal data class CapturedGroup(var name: String): RegbexMatchElement()
 
-internal data class LazyAmountOfBegin(var range: IntProgression): RegbexMatchElement()
+internal data class LazyAmountOfBegin(var range: IntProgression): RegbexMatchElement() {
+    var endIndex: Int = 0
+}
 internal open class LazyAmountOfEnd : RegbexMatchElement()
 
-internal data class GreedyAmountOfBegin(var range: IntProgression): RegbexMatchElement()
+internal data class GreedyAmountOfBegin(var range: IntProgression): RegbexMatchElement() {
+    var endIndex: Int = 0
+}
 internal open class GreedyAmountOfEnd: RegbexMatchElement()
 
 
@@ -63,8 +67,10 @@ class Regbex {
      * Equivalent to `{x,y}?` in regular expression
      */
     fun thenLazyAmountOf(range: IntProgression, regbex: RegbexBuilder) {
-        elements.add(LazyAmountOfBegin(range))
+        val element = LazyAmountOfBegin(range)
+        elements.add(element)
         elements.addAll(regbex.getRegbex().elements)
+        element.endIndex = elements.size
         elements.add(LazyAmountOfEnd())
     }
 
@@ -80,8 +86,10 @@ class Regbex {
      * Equivalent to `{x,y}` in regular expression
      */
     fun thenAmountOf(range: IntProgression, regbex: RegbexBuilder) {
-        elements.add(GreedyAmountOfBegin(range))
+        val element = GreedyAmountOfBegin(range)
+        elements.add(element)
         elements.addAll(regbex.getRegbex().elements)
+        element.endIndex = elements.size
         elements.add(GreedyAmountOfEnd())
     }
 
