@@ -31,7 +31,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return capturedNamed[groupName]?.end
     }
 
-    override fun replaceGroup(groupName: String, replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
+    override fun replaceGroup(groupName: String, replaceTo: ReplaceTarget): ArrayList<AbstractInsnNode> {
         checkMatched()
         if (group(groupName) == null) {
             return ArrayList(instructions)
@@ -53,7 +53,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return newInstructions
     }
 
-    override fun replace(replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
+    override fun replace(replaceTo: ReplaceTarget): ArrayList<AbstractInsnNode> {
         checkMatched()
         val newInstructions = ArrayList<AbstractInsnNode>()
 
@@ -66,7 +66,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                 continue
             }
             if (index == startIndex()) {
-                newInstructions.addAll(replaceTo)
+                newInstructions.addAll(getRealReplaceContent(replaceTo))
             }
         }
         return newInstructions
@@ -118,7 +118,26 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         }
     }
 
+    /**
+     * This property will be used and be written by next(). If you overwrite it, the next time you call next() won't
+     * use the previous matching end index as start matching index
+     */
+    var currentEndMatchingIndex = 0
 
+    /**
+     * Find the next match starts from [currentEndMatchingIndex] (which will be automatically written by this function)
+     */
+    fun next(): Boolean {
+        if (next(currentEndMatchingIndex)) {
+            currentEndMatchingIndex = endIndex()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Find the next match starts from [startIndex]
+     */
     fun next(startIndex: Int): Boolean {
         return next0(startIndex, true)
     }

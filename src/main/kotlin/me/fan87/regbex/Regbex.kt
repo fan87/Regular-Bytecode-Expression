@@ -5,6 +5,7 @@ import me.fan87.regbex.utils.MethodArgumentsTypeReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
@@ -424,6 +425,36 @@ class Regbex {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.PUTFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
     //</editor-fold>
+
+    /**
+     * Expect a return ([Opcodes.IRETURN], [Opcodes.LRETURN], [Opcodes.FRETURN], [Opcodes.DRETURN], [Opcodes.ARETURN], or [Opcodes.RETURN])(Opcode: 172 ~ 177, inclusive)
+     */
+    fun thenReturn() {
+        thenCustomCheck { it.opcode in 172..177 }
+    }
+
+    /**
+     * Expect a ALOAD 0
+     */
+    fun thenThis() {
+        thenCustomCheck { it.opcode == Opcodes.ALOAD && (it as VarInsnNode).`var` == 0 }
+    }
+
+    /**
+     * Expect a push int with specified number. Note that every instruction that will push to the number to the stack
+     * will also work even if they are illegal, for example, LdcInsnNode(0)
+     */
+    fun thenPushInt(number: Int) {
+        thenCustomCheck {
+            if (it.opcode in Opcodes.ICONST_M1..Opcodes.ICONST_5) {
+                return@thenCustomCheck (it.opcode - Opcodes.ICONST_0) == number
+            }
+            if (it is IntInsnNode) {
+                return@thenCustomCheck it.operand == number
+            }
+            return@thenCustomCheck false
+        }
+    }
 
 
 }

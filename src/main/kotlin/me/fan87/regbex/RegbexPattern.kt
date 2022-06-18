@@ -24,5 +24,20 @@ class RegbexPattern(val regbex: Regbex) {
         return RegbexMatcher(method.instructions, this)
     }
 
+    /**
+     * Replace everything that matches with [insnList]
+     */
+    fun replaceAll(original: Iterable<AbstractInsnNode>, insnList: ReplaceTarget): List<AbstractInsnNode> {
+        var out = ArrayList<AbstractInsnNode>()
+        var matcher = matcher(original)
+        var index = 0
+        while (matcher.next(index)) {
+            index = matcher.endIndexAfterReplacing(insnList)
+            out = matcher.replace(insnList)
+            matcher = matcher(out)
+        }
+        return out
+    }
+
 
 }

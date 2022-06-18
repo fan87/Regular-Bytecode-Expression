@@ -4,8 +4,18 @@
 
 > ⚠️ This repository is in experimental state! If you encounter any issue, please open a GitHub issue or pull request!
 
-A regular expression engine that's made for Java bytecode and objectweb ASM.
+A regular expression engine that's made for Java bytecode and objectweb ASM. It's designed to be easy to use
 
+
+## Main Features
+
+- **Fast** - Tested in Minecraft, runs smoothly, and it usually needs to load a lot of classes while initializing the game,
+but it's still as smooth as it should be. (**BUT** Keep in mind that at the end of the day, it's still regex, if you are using
+a complicated pattern, we can't promise the efficiency of that)
+- **Easy to use** - Just like regex, it's easy to use - probably easier, because you don't need to remember all those
+crazy symbols anymore
+- **Replacing** - You can replace instructions like what you could do in regex, and you could also do
+- **Capturing** - Capture groups, and process them programmatically.
 
 ## Missing Features / Known Issues
 1. Look-Behind & Look-After (Won't add for now) (Can be replaced with `thenCheckWithoutMovingPointer`, but 
@@ -105,6 +115,11 @@ Lazy in regex is `?`, for example, `.*?`, it means that it will match as few as 
 ### Is it thread-safe?
 About the matcher, no, not at all. Please create multiple matcher instances to match instructions in a different
 thread, even if they are the same.
+
+### How do I replace matched result with a group without crafting them myself?
+You could replace them to `ReplacePlaceHolder("groupName")`, and the engine will convert that to the group content.
+
+For more information, please check KDoc.
 
 ## Development / Code Quality
 ### About Testing
