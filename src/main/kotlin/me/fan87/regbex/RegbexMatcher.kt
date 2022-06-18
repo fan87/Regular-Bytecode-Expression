@@ -4,9 +4,14 @@ import me.fan87.regbex.utils.InstructionEqualChecker
 import org.objectweb.asm.tree.AbstractInsnNode
 import java.util.Stack
 
-class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode>, private val pattern: RegbexPattern) {
+/**
+ * A matcher with same concept as Java's [Regular Expression Matcher API][java.util.regex.Matcher].
+ * You should only be obtaining this object via [RegbexPattern.matcher].
+ */
+class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode>, private val pattern: RegbexPattern): RegbexResultable {
 
-    val instructions = ArrayList<AbstractInsnNode>()
+
+    private val instructions = ArrayList<AbstractInsnNode>()
 
     init {
         for (instruction in instructions) {
@@ -16,23 +21,17 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
 
 
 
-    /**
-     * Get the inclusive start of a group
-     */
-    fun groupStart(groupName: String): Int? {
+    override fun groupStart(groupName: String): Int? {
         checkMatched()
         return capturedNamed[groupName]?.start
     }
 
-    /**
-     * Get the exclusive end of a group
-     */
-    fun groupEnd(groupName: String): Int? {
+    override fun groupEnd(groupName: String): Int? {
         checkMatched()
         return capturedNamed[groupName]?.end
     }
 
-    fun replaceGroup(groupName: String, replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
+    override fun replaceGroup(groupName: String, replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
         checkMatched()
         if (group(groupName) == null) {
             return ArrayList(instructions)
@@ -54,7 +53,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return newInstructions
     }
 
-    fun replace(replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
+    override fun replace(replaceTo: Iterable<AbstractInsnNode>): ArrayList<AbstractInsnNode> {
         checkMatched()
         val newInstructions = ArrayList<AbstractInsnNode>()
 
@@ -76,7 +75,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     /**
      * Exclusive
      */
-    fun endIndex(): Int {
+    override fun endIndex(): Int {
         checkMatched()
         return matched!!.end
     }
@@ -84,17 +83,22 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     /**
      * Inclusive
      */
-    fun startIndex(): Int {
+    override fun startIndex(): Int {
         checkMatched()
         return matched!!.start
     }
 
-    fun group(): List<AbstractInsnNode> {
+    override fun matchedSize(): Int {
+        checkMatched()
+        return matched!!.size()
+    }
+
+    override fun group(): List<AbstractInsnNode> {
         checkMatched()
         return matched!!.getRegion()
     }
 
-    fun group(name: String): List<AbstractInsnNode>? {
+    override fun group(name: String): List<AbstractInsnNode>? {
         checkMatched()
         val regbexRegion = capturedNamed[name]
         return regbexRegion?.getRegion()
@@ -104,7 +108,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return instructions.subList(this.start, this.end)
     }
 
-    fun pattern(): RegbexPattern {
+    override fun pattern(): RegbexPattern {
         return this.pattern
     }
 
@@ -119,13 +123,21 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
         return next0(startIndex, true)
     }
 
-    fun nextOnlyOne(startIndex: Int): Boolean {
-        return next0(startIndex, false)
+    fun matches(): Boolean {
+        val result = next0(0, false)
+        if (!result) {
+            return false
+        }
+        if (matchedSize() != instructions.size) {
+            matchedAny = false
+            return false
+        }
+        return true
     }
-
-    var debug = true
+    var debug = false
     var debugMessage = ""
 
+    //<editor-fold desc="Internal" defaultstate="collapsed">
     // State:
     private var elements = pattern.regbex.elements
     private var target: List<AbstractInsnNode> = ArrayList()
@@ -207,7 +219,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
                             failed("Group is not captured (yet): ${currentElement.name}")
                         }
 
-                        for (abstractInsnNode in region!!) {
+                        for (abstractInsnNode in region) {
                             val instruction =
                                 nextInstruction("CapturedGroup requires one more instruction to check")
                             if (!InstructionEqualChecker.checkEquals(abstractInsnNode, instruction)) {
@@ -380,6 +392,7 @@ class RegbexMatcher internal constructor(instructions: Iterable<AbstractInsnNode
     private fun failed(reason: String): Nothing {
         throw RegbexMatchException(reason)
     }
+    //</editor-fold>
 
 }
 

@@ -32,7 +32,7 @@ class StartEndTest {
             thenEndOfInstructions()
         }.matcher(instructions)
 
-        assertTrue(matcher.nextOnlyOne(0))
+        assertTrue(matcher.next(0))
         assertEquals("Hello, World!", (matcher.group("printedMessage")!![0] as LdcInsnNode).cst)
         assertEquals(matcher.group().size, 3)
     }

@@ -9,7 +9,6 @@ import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import java.io.PrintStream
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AndTest {
@@ -32,7 +31,7 @@ class AndTest {
             thenVirtualMethodCallIgnoreArgs(TypeExp(PrintStream::class.java), Regex.fromLiteral("println"), TypeExp(PrimitiveType.VOID))
         }.matcher(instructions)
 
-        assertTrue(matcher.nextOnlyOne(0))
+        assertTrue(matcher.next(0))
         assertEquals("Hello, World!", (matcher.group("printedMessage")!![0] as LdcInsnNode).cst)
         assertEquals(matcher.group().size, 3)
     }

@@ -41,81 +41,145 @@ class Regbex {
 
     ////////// Basic Functions (Requires Implementation) //////////
 
+    /**
+     * A named capture group. Everything inside this block will be captured, and will be accessible via [RegbexMatcher.group(String)][RegbexMatcher.group]
+     */
     fun thenGroup(name: String, regbex: RegbexBuilder) {
         elements.add(GroupBegin(name))
         elements.addAll(regbex.getRegbex().elements)
         elements.add(GroupEnd())
     }
 
+    /**
+     * A custom check to check if an instruction matches or not
+     */
     fun thenCustomCheck(check: (instruction: AbstractInsnNode) -> Boolean) {
         elements.add(CustomCheck(check))
     }
 
+    /**
+     * Amount of [regbex]. Will match as few as possible (lazy)
+     * Equivalent to `{x,y}?` in regular expression
+     */
     fun thenLazyAmountOf(range: IntProgression, regbex: RegbexBuilder) {
         elements.add(LazyAmountOfBegin(range))
         elements.addAll(regbex.getRegbex().elements)
         elements.add(LazyAmountOfEnd())
     }
 
+    /**
+     * Expect an already captured named group
+     */
     fun thenCapturedGroup(name: String) {
         elements.add(CapturedGroup(name))
     }
 
+    /**
+     * Amount of [regbex]. Will match as much as possible (greedy)
+     * Equivalent to `{x,y}` in regular expression
+     */
     fun thenAmountOf(range: IntProgression, regbex: RegbexBuilder) {
         elements.add(GreedyAmountOfBegin(range))
         elements.addAll(regbex.getRegbex().elements)
         elements.add(GreedyAmountOfEnd())
     }
 
+    /**
+     * Check without increasing the index of current match. Could be captured, but since it won't increase the index,
+     * the matched group will always be the same. Being used to do [thenAnd]
+     */
     fun thenCheckWithoutMovingPointer(regbex: RegbexBuilder) {
         elements.add(CheckWithoutMovingPointerBegin())
         elements.addAll(regbex.getRegbex().elements)
         elements.add(CheckWithoutMovingPointerEnd())
     }
 
+    /**
+     * Assert that it's the start of instructions (Index = 0). With [thenEndOfInstructions] at the end, and this at the front,
+     * it will check if the entire instructions list matches.
+     * @see thenEndOfInstructions
+     */
     fun thenStartOfInstructions() {
         elements.add(StartOfInstructions())
     }
+
+    /**
+     * Assert that it's the end of instructions (index = size - 1)
+     * @see thenStartOfInstructions
+     */
     fun thenEndOfInstructions() {
         elements.add(EndOfInstructions())
     }
 
-    ////////// Debug Friendly Aliases //////////
+    ////////// Aliases //////////
 
-    fun thenAny() {
+    /**
+     * Expect any instruction
+     */
+    fun thenAny() { // .
         thenCustomCheck { true }
     }
 
-    ////////// Aliases //////////
-
-
-    fun thenLazyAmountOf(amount: Int, regbex: RegbexBuilder) {
+    /**
+     * Fixed amount of [regbex] (without a range, but only 1 number), will match as few as possible (lazy)
+     * Equivalent to `{x}?` in regular expression
+     * @see thenLazyAmountOf
+     */
+    fun thenLazyAmountOf(amount: Int, regbex: RegbexBuilder) { // {x}?
         thenLazyAmountOf(amount..amount, regbex)
     }
 
-    fun thenAmountOf(amount: Int, regbex: RegbexBuilder) {
+    /**
+     * Fixed amount of [regbex] (without a range, but only 1 number). Will match as much as possible (greedy)
+     * Equivalent to `{x}` in regular expression
+     * @see thenAmountOf
+     */
+    fun thenAmountOf(amount: Int, regbex: RegbexBuilder) { // {x}
         thenAmountOf(amount..amount, regbex)
     }
 
-    // Operators
+    // Greedy Operators
+    /**
+     * Then any amount of matches, will match as much as possible (greedy).
+     * Equivalent to `*` in regular expression
+     */
     fun thenAnyAmountOf(regbex: RegbexBuilder) { // *
         thenAmountOf(0..Int.MAX_VALUE, regbex)
     }
+    /**
+     * Then at least one match, will match as much as possible (greedy).
+     * Equivalent to `+` in regular expression
+     */
     fun thenAtLeastOneOf(regbex: RegbexBuilder) { // +
         thenAmountOf(1..Int.MAX_VALUE, regbex)
     }
+    /**
+     * Then optional (0-1), will match if possible (greedy)
+     * Equivalent to `?` in regular expression
+     */
     fun thenOptional(regbex: RegbexBuilder) { // ?
         thenAmountOf(0..1, regbex)
     }
+
     // Lazy
+    /**
+     * Then any amount of matches, will match as few as possible (lazy)
+     * Equivalent to `*?` in regular expression
+     */
     fun thenLazyAnyAmountOf(regbex: RegbexBuilder) { // *?
         thenLazyAmountOf(0..Int.MAX_VALUE, regbex)
     }
+    /**
+     * Then at least one match, will match as few as possible (lazy)
+     * Equivalent to `+?` in regular expression
+     */
     fun thenLazyAtLeastOneOf(regbex: RegbexBuilder) { // +?
         thenLazyAmountOf(1..Int.MAX_VALUE, regbex)
     }
 
-
+    /**
+     * And check the same thing. The index pointer will be moved to where the last condition is ended
+     */
     fun thenAnd(vararg regbexs: RegbexBuilder) {
         val toList = regbexs.toList()
         for (regbex in toList.dropLast(1)) {
@@ -128,19 +192,51 @@ class Regbex {
 
     ////////// Advanced Matching //////////
 
-
+    /**
+     * Expect an instruction with [opcode]
+     */
     fun thenOpcodeCheck(opcode: Int) {
         thenCustomCheck { it.opcode == opcode }
     }
 
-    fun thenTypeCheck(type: Class<out AbstractInsnNode?>) {
+    /**
+     * Expect an instruction with type [type] (Equal, not assignable from)
+     */
+    fun thenTypeCheckEqual(type: Class<out AbstractInsnNode?>) {
         thenCustomCheck { it.javaClass == type }
     }
 
+    /**
+     * Expect an instruction with type [T] (Equal, not assignable from)
+     */
+    inline fun <reified T> thenTypeCheckEqual() {
+        thenCustomCheck { it.javaClass == T::class.java }
+    }
+
+    /**
+     * Expect an instruction with type [type] (Assignable From)
+     */
+    fun thenTypeCheckAssignableFrom(type: Class<out AbstractInsnNode?>) {
+        thenCustomCheck { type.isAssignableFrom(it.javaClass) }
+    }
+
+    /**
+     * Expect an instruction with type [T] (Assignable From)
+     */
+    inline fun <reified T> thenTypeCheckAssignableFrom() {
+        thenCustomCheck { it is T }
+    }
+
+    /**
+     * Expect an exact same instruction
+     */
     fun thenEqual(instruction: AbstractInsnNode) {
         thenCustomCheck { InstructionEqualChecker.checkEquals(instruction, it) }
     }
 
+    /**
+     * Expect exact same list of instructions
+     */
     fun thenEqual(list: Iterable<AbstractInsnNode>) {
         for (abstractInsnNode in list) {
             thenEqual(abstractInsnNode)
@@ -148,21 +244,36 @@ class Regbex {
     }
 
     //<editor-fold desc="Var Node" defaultstate="collapsed">
+    /**
+     * Expect a [VarInsnNode] with var number
+     */
     fun thenVarNode(varNumber: Int) {
         thenCustomCheck {
             it is VarInsnNode && it.`var` == varNumber
         }
     }
+
+    /**
+     * Expect a [VarInsnNode] with var number and opcode
+     */
     fun thenVarNode(varNumber: Int, opcode: Int) {
         thenCustomCheck {
             it.opcode == opcode && it is VarInsnNode && it.`var` == varNumber
         }
     }
+
+    /**
+     * Expect a storing [VarInsnNode] with var number
+     */
     fun thenVarStoreNode(varNumber: Int) {
         thenCustomCheck {
             it.opcode in 54..58 && it is VarInsnNode && it.`var` == varNumber
         }
     }
+
+    /**
+     * Expect a loading [VarInsnNode] with var number
+     */
     fun thenVarLoadNode(varNumber: Int) {
         thenCustomCheck {
             it.opcode in 21..25 && it is VarInsnNode && it.`var` == varNumber
@@ -170,16 +281,25 @@ class Regbex {
     }
     //</editor-fold>
     //<editor-fold desc="Ldc String" defaultstate="collapsed">
+    /**
+     * Expect a [LdcInsnNode] with string as [LdcInsnNode.cst]'s type
+     */
     fun thenLdcString() {
         thenCustomCheck { it is LdcInsnNode && it.cst is String }
     }
 
+    /**
+     * Expect a [LdcInsnNode] with string
+     */
     fun thenLdcStringEqual(string: String) {
         thenCustomCheck {
             it is LdcInsnNode && it.cst is String && it.cst == string
         }
     }
 
+    /**
+     * Expect a [LdcInsnNode] with string that matches [regex]
+     */
     fun thenLdcStringMatches(regex: Regex) {
         thenCustomCheck {
             it is LdcInsnNode && it.cst is String && (it.cst as String).matches(regex)
@@ -187,6 +307,9 @@ class Regbex {
     }
     //</editor-fold>
     //<editor-fold desc="Method Calls" defaultstate="collapsed">
+    /**
+     * Then expect a static method call of specified method
+     */
     fun thenMethodCall(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp, vararg argsTypes: TypeExp) {
         thenCustomCheck {
             if (it is MethodInsnNode) {
@@ -203,13 +326,22 @@ class Regbex {
         }
     }
 
+    /**
+     * Then expect a static method call of specified method
+     */
     fun thenStaticMethodCall(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp, vararg argsTypes: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKESTATIC }}, {thenMethodCall(ownerType, methodNamePattern, returnType, *argsTypes)})
     }
 
+    /**
+     * Then expect a virtual (non-static) method call of specified method
+     */
     fun thenVirtualMethodCall(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp, vararg argsTypes: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKEVIRTUAL }}, {thenMethodCall(ownerType, methodNamePattern, returnType, *argsTypes)})
     }
+    /**
+     * Then expect a static method call of specified method without checking its argument types
+     */
     fun thenMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
         thenCustomCheck {
             if (it is MethodInsnNode) {
@@ -221,50 +353,73 @@ class Regbex {
             }
         }
     }
-
+    /**
+     * Then expect a static method call of specified method without checking its argument types
+     */
     fun thenStaticMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKESTATIC }}, {thenMethodCallIgnoreArgs(ownerType, methodNamePattern, returnType)})
     }
-
+    /**
+     * Then expect a virtual (non-static) method call of specified method without checking its argument types
+     */
     fun thenVirtualMethodCallIgnoreArgs(ownerType: TypeExp, methodNamePattern: Regex, returnType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.INVOKEVIRTUAL }}, {thenMethodCallIgnoreArgs(ownerType, methodNamePattern, returnType)})
     }
     //</editor-fold>
     //<editor-fold desc="Fields" defaultstate="collapsed">
+    /**
+     * Then expect a [FieldInsnNode] with specified field info
+     */
     fun thenField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenCustomCheck {
             it is FieldInsnNode && ownerType.matches(it.owner) && it.name.matches(fieldNamePattern) && fieldType.matches(it.desc)
         }
     }
-
+    /**
+     * Then expect a static [FieldInsnNode] with specified field info
+     */
     fun thenStaticField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.GETSTATIC || it.opcode == Opcodes.PUTSTATIC }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a virtual (non-static) [FieldInsnNode] with specified field info
+     */
     fun thenVirtualField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.GETFIELD || it.opcode == Opcodes.PUTFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a get [FieldInsnNode] with specified field info
+     */
     fun thenGetField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.GETSTATIC || it.opcode == Opcodes.GETFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a get static [FieldInsnNode] with specified field info
+     */
     fun thenGetStaticField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.GETSTATIC }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a get virtual (non-static) [FieldInsnNode] with specified field info
+     */
     fun thenGetVirtualField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.GETFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a put [FieldInsnNode] with specified field info
+     */
     fun thenPutField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.PUTSTATIC || it.opcode == Opcodes.PUTFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a put static [FieldInsnNode] with specified field info
+     */
     fun thenPutStaticField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.PUTSTATIC }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }
-
+    /**
+     * Then expect a put virtual (non-static) [FieldInsnNode] with specified field info
+     */
     fun thenPutVirtualField(ownerType: TypeExp, fieldNamePattern: Regex, fieldType: TypeExp) {
         thenAnd({thenCustomCheck { it.opcode == Opcodes.PUTFIELD }}, {thenField(ownerType, fieldNamePattern, fieldType)})
     }

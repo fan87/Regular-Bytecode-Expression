@@ -102,7 +102,11 @@ the front and `;` in the end of the class name, so if you want to match `java.la
 Not Supported Yet
 
 ### What is lazy
-Lazy in regex is `?`, for example, `.*?`, it means that it will match as few as possible
+Lazy in regex is `?`, for example, `.*?`, it means that it will match as few as possible.
+
+### Is it thread-safe?
+About the matcher, no, not at all. Please create multiple matcher instances to match instructions in a different
+thread, even if they are the same.
 
 ## Development / Code Quality
 ### About Testing
