@@ -57,4 +57,42 @@ class GreedyTest {
         assertTrue(matcher.next(0))
     }
 
+    @Test
+    internal fun greedyTestC() {
+        val instructions = InsnList().apply {
+            add(LdcInsnNode("A"))
+            add(LdcInsnNode("B"))
+            add(LdcInsnNode("C"))
+        }
+
+        val matcher = RegbexPattern {
+            thenLdcString()
+            thenOptional {
+                thenLdcStringEqual("B")
+            }
+            thenLdcString()
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+    }
+
+    @Test
+    internal fun greedyTestD() {
+        val instructions = InsnList().apply {
+            add(LdcInsnNode("A"))
+            add(LdcInsnNode("B"))
+            add(LdcInsnNode("C"))
+        }
+
+        val matcher = RegbexPattern {
+            thenLdcString()
+            thenOptional {
+                thenLdcStringEqual("C")
+            }
+            thenLdcString()
+        }.matcher(instructions)
+
+        assertTrue(matcher.next(0))
+    }
+
 }

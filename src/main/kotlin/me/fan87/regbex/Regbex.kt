@@ -460,8 +460,18 @@ class Regbex {
             if (it is IntInsnNode) {
                 return@thenCustomCheck it.operand == number
             }
+            if (it is LdcInsnNode) {
+                return@thenCustomCheck it.cst == number
+            }
             return@thenCustomCheck false
         }
+    }
+
+    /**
+     * Expect a Ldc node with value [any]
+     */
+    fun thenLdc(any: Any) {
+        thenCustomCheck { it is LdcInsnNode && it == any }
     }
 
 
