@@ -471,7 +471,7 @@ class Regbex {
      * Expect a Ldc node with value [any]
      */
     fun thenLdc(any: Any) {
-        thenCustomCheck { it is LdcInsnNode && it == any }
+        thenCustomCheck { it is LdcInsnNode && it.cst == any }
     }
 
 
