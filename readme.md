@@ -7,6 +7,12 @@
 A regular expression engine that's made for Java bytecode and objectweb ASM. It's designed to be easy to use
 
 
+## Missing Features / Known Issues
+1. Look-Behind & Look-After (Won't add for now) (Can be replaced with `thenCheckWithoutMovingPointer`, but 
+negative look-around would be impossible. Will add that later)
+
+**THE REPLACE FEATURE IS ALSO BUGGED! DON'T USE IT**
+
 ## Main Features
 
 - **Fast** - Tested in Minecraft, runs smoothly, and it usually needs to load a lot of classes while initializing the game,
@@ -14,12 +20,9 @@ but it's still as smooth as it should be. (**BUT** Keep in mind that at the end 
 a complicated pattern, we can't promise the efficiency of that)
 - **Easy to use** - Just like regex, it's easy to use - probably easier, because you don't need to remember all those
 crazy symbols anymore
-- **Replacing** - You can replace instructions like what you could do in regex, and you could also do
+- ~~**Replacing** - You can replace instructions like what you could do in regex, and you could also do~~ Bugged, and will be fixed later
 - **Capturing** - Capture groups, and process them programmatically.
 
-## Missing Features / Known Issues
-1. Look-Behind & Look-After (Won't add for now) (Can be replaced with `thenCheckWithoutMovingPointer`, but 
-negative look-around would be impossible. Will add that later)
 
 
 ## Using
